@@ -2,17 +2,15 @@
 
 **Track:** Tech for Equity · **Event:** Code Ada 2026 — Flourish
 
-EchoAtlas is a student hackathon adaptation of an open-source imaging workstation for educational breast-ultrasound case exploration. The planned experience compares public scans, their expert dataset annotations, and model output when a compatible trained model is available. It is for learning and research discussion, not clinical decision-making.
+EchoAtlas is an educational breast-ultrasound case explorer. It lets learners browse de-identified BUSI cases, compare expert dataset masks with experimental model output, and read plain-language notes about the workflow and its limits. It is a hackathon research demo, not a diagnostic or clinical decision tool.
 
-> This is an educational research demo, not a medical product. It is not clinically validated and must not be used to diagnose, treat, or guide care. The benchmark numbers below are reported by the upstream project and have not been independently verified by this team.
+## Current status
 
-## Project status
-
-- The inherited frontend still contains brain-MRI screens and requires the teammate's rebrand work.
-- The backend no longer serves the old brain-tumor model as if it were a breast-ultrasound model.
-- BUSI manifest preparation and a PyTorch dataset loader are included.
-- No trained checkpoint is committed. The included baseline training script creates a small U-Net checkpoint locally; `/predict` remains unavailable on a fresh clone until it is trained or a compatible checkpoint is supplied. The paper's MaskFormer implementation is not included.
-- See [TEAM_PLAN.md](TEAM_PLAN.md) for the team split, research caveats, and demo plan.
+- The EchoAtlas interface, accessible theme, case library, sources/ethics content, and BUSI API integration are in `main`.
+- A small U-Net baseline was trained from scratch for 20 epochs on the duplicate-grouped, stratified image split. This is separate from the MaskFormer in the supplied paper.
+- The local machine has the prepared BUSI data and baseline checkpoint. Raw data, checkpoint, and local metric JSON are intentionally excluded from Git; a fresh clone needs the data preparation and training steps below before it can return real BUSI predictions.
+- Measured exploratory results are documented in [BASELINE_RESULTS.md](BASELINE_RESULTS.md). They are not clinical evidence and do not reproduce the paper's reported 0.943 mAP.
+- See [TEAM_PLAN.md](TEAM_PLAN.md) for team ownership, data caveats, and presentation plan.
 
 ## Our hackathon extension plan
 
@@ -50,13 +48,19 @@ This repository is based on [atleekumaar/brain-tumor-mri-classifier](https://git
 
 ## Run locally
 
-Python dependencies are listed in `requirements.txt`. The FastAPI status endpoint is available without the MaskFormer weights, but inference remains disabled until compatible model code and weights are supplied. Start the API with:
+Install the dependencies and prepare the BUSI dataset using the commands above. To train the included baseline (optional if a compatible local checkpoint is already available):
 
 ```bash
-uvicorn backend.main:app --reload --port 8000
+python scripts/train_busi_baseline.py --epochs 20 --device auto
 ```
 
-Then open `http://127.0.0.1:8000`. Until the frontend rebrand is integrated, some inherited brain-MRI interface content will remain visible.
+The script chooses CUDA, Apple MPS, or CPU automatically. It saves `models/EchoAtlas_baseline.pt` and `data/busi_baseline_metrics.json`; both are local artifacts. Then start the API:
+
+```bash
+python3 -m uvicorn backend.main:app --reload --port 8010
+```
+
+Open `http://127.0.0.1:8010`. If port 8010 is already in use, the app may already be running; open that URL, or choose another port such as `8011` and use that port in the browser URL.
 
 ## License
 
