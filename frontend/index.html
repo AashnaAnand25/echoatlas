@@ -6,7 +6,7 @@
   <title>EchoAtlas — Accessible Breast-Ultrasound Case-Learning Workstation</title>
   <meta name="description" content="EchoAtlas is an educational, non-diagnostic breast-ultrasound case explorer: compare a public case's scan, its dataset annotation, and an experimental model mask.">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261010-ui-refresh">
 
 </head>
 <body>
@@ -84,7 +84,7 @@
           <span>Educational Notice</span>
         </button>
 
-        <button class="btn btn-primary-sm" id="quickCaseBtn" type="button">
+        <button class="btn btn-primary-sm" id="quickCaseBtn" type="button" data-tab="library" aria-controls="view-library">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           <span>Open Case Library</span>
         </button>
@@ -191,13 +191,13 @@
           <div class="view-header">
             <div>
               <h1 class="view-title" id="title-overview" tabindex="-1">EchoAtlas: learn to read an ultrasound case</h1>
-              <p class="view-subtitle">An educational explorer for breast-ultrasound cases. Open a public case, compare the original scan with its expert annotation and an experimental model overlay, and read what each one does &mdash; and does not &mdash; tell you.</p>
+              <p class="view-subtitle">Explore public breast-ultrasound examples. Compare each scan with its dataset annotation and an experimental model output.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-secondary" type="button" data-tab="sources">
+              <button class="btn btn-secondary" type="button" data-tab="sources" aria-controls="view-sources">
                 <span>Sources &amp; Ethics</span>
               </button>
-              <button class="btn btn-primary" type="button" data-tab="library">
+              <button class="btn btn-primary" type="button" data-tab="library" aria-controls="view-library">
                 <span>Open Case Library</span>
               </button>
             </div>
@@ -320,7 +320,7 @@
               <div class="guide-card">
                 <div class="guide-num">03</div>
                 <h3>Compare the layers</h3>
-                <p>Switch on the <strong>expert annotation</strong> (from the dataset) and, if available, the <strong>model mask</strong> (experimental). They are shown separately on purpose.</p>
+                <p>Switch on the <strong>dataset annotation</strong> and, if available, the <strong>experimental model mask</strong>. Compare them as separate layers.</p>
               </div>
               <div class="guide-card">
                 <div class="guide-num">04</div>
@@ -1321,6 +1321,6 @@
   <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
   <!-- Application Script -->
-  <script src="script.js"></script>
+  <script src="script.js?v=20261010-ui-refresh"></script>
 </body>
 </html>

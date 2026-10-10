@@ -531,11 +531,12 @@
   }
 
   document.addEventListener("click", e => {
-    const el = e.target.closest("[data-tab]");
+    const path = typeof e.composedPath === "function" ? e.composedPath() : [e.target];
+    const el = path.find(node => node instanceof Element && node.matches("[data-tab]"));
     if (!el) return;
     e.preventDefault();
     switchTab(el.getAttribute("data-tab"));
-  });
+  }, true);
 
   const atlasSearch = $("atlasSearch");
   if (atlasSearch) atlasSearch.addEventListener("input", () => renderAtlas(atlasSearch.value));
@@ -596,8 +597,6 @@
       switchTab("overview");
     }
   });
-
-  $("quickCaseBtn").addEventListener("click", () => switchTab("library"));
 
   const skip = $("skipLink");
   skip.addEventListener("click", e => {

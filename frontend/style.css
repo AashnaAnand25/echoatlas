@@ -753,17 +753,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .view-title {
-  font-size: 1.5rem;
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .view-subtitle {
-  font-size: 0.8125rem;
+  max-width: 68ch;
+  font-size: 0.9375rem;
   color: var(--text-secondary);
   margin-top: 4px;
+  line-height: 1.55;
 }
+
 
 .view-header-actions {
   display: flex;
@@ -817,9 +821,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card-desc {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   margin-bottom: 16px;
+  line-height: 1.55;
 }
 
 .card-sub-mono {
