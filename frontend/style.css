@@ -2864,7 +2864,8 @@ h1, h2, h3, h4, h5, h6 {
     background: #FFF !important;
     color: #000 !important;
   }
-  .top-nav, .sidebar, .view-header, .ambient-grid, .ambient-glow, .toast-container {
+  .top-nav, .sidebar, .view-header, .ambient-grid, .ambient-glow, .toast-container,
+  .skip-link, .modal-backdrop, .loading-modal-backdrop {
     display: none !important;
   }
   .main-content {
@@ -2873,8 +2874,11 @@ h1, h2, h3, h4, h5, h6 {
   .tab-view {
     display: none !important;
   }
-  #view-reports {
+  #view-history {
     display: block !important;
+  }
+  #view-history > :not(.report-sheet-container) {
+    display: none !important;
   }
   .report-sheet-container {
     background: #FFF !important;
@@ -2887,6 +2891,11 @@ h1, h2, h3, h4, h5, h6 {
   .report-sheet-container * {
     color: #000 !important;
     border-color: #CCC !important;
+  }
+  .report-img-card, .report-verdict-box, .report-telemetry-grid,
+  .report-disclaimer-box {
+    background: #FFF !important;
+    break-inside: avoid;
   }
 }
 
@@ -2940,6 +2949,12 @@ button:disabled, [aria-disabled="true"] {
 }
 .sidebar-item.active { box-shadow: inset 3px 0 var(--accent-teal); }
 .nav-link.active { text-decoration: underline; text-underline-offset: 0.3em; }
+/* Underlines communicate selection even when accent colors are indistinct. */
+.filter-pill.active, .filter-pill[aria-pressed="true"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
 .research-banner { background: var(--accent-soft); border-left: 3px solid var(--accent-teal); }
 .badge-cyan, .lab-badge { background: var(--accent-soft); border-color: var(--accent-teal); }
 .badge-purple { background: var(--coral-soft); border-color: var(--accent-coral); }
@@ -2996,6 +3011,17 @@ button:disabled, [aria-disabled="true"] {
 .table-toolbar, .meta-row, .spec-item, .explain-meta-footer,
 .loading-telemetry-dock, .report-sheet-header { flex-wrap: wrap; }
 .card-header, .panel-header, .stage-info-header { gap: 0.75rem; }
+.metric-header, .verdict-title-row, .gauge-header, .prob-row-header,
+.rep-conf-row, .class-chip { flex-wrap: wrap; gap: 0.5rem; }
+.meta-row, .spec-item { align-items: baseline; gap: 0.25rem 1rem; }
+.meta-v, .spec-v, .study-details { min-width: 0; }
+.spec-v { flex: 1 1 12rem; }
+.spec-k { flex: 0 1 7rem; }
+.class-chip .chip-dot { flex-shrink: 0; }
+.report-sheet-header { gap: 1rem; }
+.report-prob-table { table-layout: fixed; }
+/* JS renders a 120px inline bar track; constrain its box, not its data width. */
+.report-prob-table td > div { max-width: 100%; }
 .panel-header { height: auto; min-height: 3.5rem; padding-block: 0.75rem; }
 .viewer-footer-dock { align-items: flex-start; }
 .viewer-adjusters { gap: 0.75rem; }
@@ -3015,6 +3041,8 @@ button:disabled, [aria-disabled="true"] {
 .modal-header { gap: 0.75rem; }
 .toast-container { max-width: calc(100% - 2rem); right: 1rem; bottom: 1rem; }
 .toast { overflow-wrap: anywhere; }
+/* Separate stacked sections without affecting grid/panel spacing. */
+.tab-view > .card, .tab-view > .overview-bottom-layout { margin-bottom: 1.5rem; }
 
 /* Skip link and visually hidden text utilities used by the accessible UI. */
 .sr-only {
@@ -3073,6 +3101,9 @@ button:disabled, [aria-disabled="true"] {
   .card { padding: 1rem; }
   .sample-thumb-wrapper { min-height: 0; }
   .report-telemetry-grid, .stage-meta-grid, .class-chips-list { grid-template-columns: minmax(0, 1fr); }
+  .class-chip { font-size: 0.875rem; }
+  .meta-row, .spec-item { font-size: 0.875rem; }
+  .report-meta-box { text-align: left; }
   .mri-viewport { min-height: 22rem; }
   .hud-top-left, .hud-bottom-left { left: 0.5rem; }
   .hud-top-right, .hud-bottom-right { right: 0.5rem; }
@@ -3095,5 +3126,9 @@ button:disabled, [aria-disabled="true"] {
   :focus-visible, .search-input-wrap input:focus-visible { outline: 3px solid Highlight; }
   .btn-primary, .btn-primary-sm, .btn-sample-run { border: 1px solid ButtonText; }
   .sidebar-item.active, .nav-link.active, .filter-pill.active { border: 2px solid Highlight; }
-  .gauge-fill, .prob-fill { background: Highlight; }
+  /* Inline probability colors otherwise disappear in Windows high contrast. */
+  .gauge-fill, .prob-bar-fill {
+    forced-color-adjust: none;
+    background: Highlight !important;
+  }
 }
