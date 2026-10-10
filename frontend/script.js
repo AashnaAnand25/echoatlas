@@ -943,18 +943,25 @@
     if (viewerImg.getAttribute("src") !== c.imageUrl) viewerImg.src = c.imageUrl;
     viewerImg.alt = `Breast ultrasound image, case ${c.id}: ${c.title}`;
 
-    const srcLabel = c.source === "illustrative" ? "Illustrative placeholder" : c.source === "upload" ? "Your upload" : "Public dataset";
+    const isUpload = c.source === "upload";
+    const srcLabel = c.source === "illustrative" ? "Illustrative placeholder" : isUpload ? "Custom upload" : "Public dataset";
     $("caseThumbnail").src = c.imageUrl;
     $("caseThumbnail").alt = `Thumbnail of case ${c.id}`;
-    setText("caseSourceBadge", c.source === "illustrative" ? "ILLUSTR." : c.source === "upload" ? "UPLOAD" : "DATASET");
+    setText("caseSourceBadge", c.source === "illustrative" ? "ILLUSTR." : isUpload ? "UPLOAD" : "DATASET");
     setText("caseIdText", c.id);
     setText("caseTitleText", c.title);
-    setText("caseSourceText", srcLabel);
-    setText("caseAnnotationText", c.annotationUrl ? (c.source === "illustrative" ? "Illustrative outline (placeholder)" : "Expert annotation available") : "None for this case");
-    setText("caseRefLabelText", c.refLabel ? `${labelOf(c.refLabel)} (dataset label)` : "None");
+    setText("caseSourceText", isUpload ? "Custom image upload" : srcLabel);
+    setText("caseAnnotationText", isUpload
+      ? "None (custom upload — no expert annotation)"
+      : (c.annotationUrl ? (c.source === "illustrative" ? "Illustrative outline (placeholder)" : "Expert annotation available") : "None for this case"));
+    setText("caseRefLabelText", isUpload
+      ? "None (custom upload — no dataset reference label)"
+      : (c.refLabel ? `${labelOf(c.refLabel)} (dataset label)` : "None"));
     setText("caseFileName", c.filename || "—");
-    setText("caseTeachingPoint", c.point || "");
-    setText("hudSourceText", srcLabel.toUpperCase());
+    setText("caseTeachingPoint", isUpload
+      ? "This is your own image upload. There is no expert annotation or dataset reference label to compare against."
+      : (c.point || ""));
+    setText("hudSourceText", (isUpload ? "CUSTOM UPLOAD" : srcLabel).toUpperCase());
 
     // Annotation layer
     if (c.annotationUrl) {
@@ -977,7 +984,16 @@
       state.viewer.showModel = false;
     }
 
-    $("toggleAnnotationBtn").disabled = false;
+    const annBtn = $("toggleAnnotationBtn");
+    if (c.annotationUrl) {
+      annBtn.disabled = false;
+      annBtn.title = "Toggle dataset annotation (A)";
+      annBtn.textContent = "Dataset annotation";
+    } else {
+      annBtn.disabled = true;
+      annBtn.title = isUpload ? "No expert annotation available for custom uploads" : "No dataset annotation for this case";
+      annBtn.textContent = isUpload ? "No dataset annotation (upload)" : "No dataset annotation";
+    }
     $("toggleModelBtn").disabled = false;
     $("runModelBtn").disabled = false;
 
@@ -996,14 +1012,41 @@
     const chip = $("analysisStatusChip");
     const label = $("analysisStatusLabel");
     const card = $("wsVerdictCard");
+    const cmpBox = $("wsComparisonBox");
 
-    setText("wsRefLabel", c && c.refLabel ? `${labelOf(c.refLabel)} (dataset)` : "—");
+    if (c) {
+      if (c.refLabel) {
+        setText("wsRefLabel", `${labelOf(c.refLabel)} (dataset)`);
+      } else if (c.source === "upload") {
+        setText("wsRefLabel", "None (custom upload)");
+      } else {
+        setText("wsRefLabel", "None");
+      }
+    } else {
+      setText("wsRefLabel", "—");
+    }
 
     if (!c || !c.analysis) {
       if (label) label.textContent = "Not run";
       if (chip) chip.className = "status-indicator-chip";
       if (card) card.hidden = true;
       setText("wsModelOutput", c ? "Not run yet" : "—");
+      if (cmpBox) {
+        if (c && c.source === "upload") {
+          cmpBox.hidden = false;
+          cmpBox.innerHTML = `
+            <div class="ws-comparison-alert ws-comparison-upload" role="status">
+              <div class="comparison-alert-header">
+                <span class="badge badge-secondary">CUSTOM UPLOAD</span>
+                <strong>No dataset reference label</strong>
+              </div>
+              <p>This image has no expert annotation or dataset reference label.</p>
+            </div>`;
+        } else {
+          cmpBox.hidden = true;
+          cmpBox.innerHTML = "";
+        }
+      }
       return;
     }
 
@@ -1018,10 +1061,49 @@
       setText("wsVerdictConf", `${a.confidence.toFixed(1)}%`);
       $("wsVerdictFill").style.width = `${Math.max(0, Math.min(100, a.confidence))}%`;
       setText("wsModelOutput", `${labelOf(a.prediction)} (${a.confidence.toFixed(1)}%)`);
+
+      if (cmpBox) {
+        cmpBox.hidden = false;
+        if (c.refLabel) {
+          const isDisagree = c.refLabel.toLowerCase() !== a.prediction.toLowerCase();
+          if (isDisagree) {
+            cmpBox.innerHTML = `
+              <div class="ws-comparison-alert ws-comparison-disagree" role="status">
+                <div class="comparison-alert-header">
+                  <span class="badge badge-warning">⚠️ DISAGREEMENT</span>
+                  <strong style="color:var(--status-warning, #FFB547);">Dataset ${esc(labelOf(c.refLabel))} &ne; Model ${esc(labelOf(a.prediction))}</strong>
+                </div>
+                <p>The baseline model predicted a different class than the dataset reference label (${a.confidence.toFixed(1)}% prob). Review the margins in Workspace or see Classification tab.</p>
+              </div>`;
+          } else {
+            cmpBox.innerHTML = `
+              <div class="ws-comparison-alert ws-comparison-agree" role="status">
+                <div class="comparison-alert-header">
+                  <span class="badge badge-success">✓ AGREEMENT</span>
+                  <strong style="color:var(--status-success, #32D583);">Reference &amp; model agree: ${esc(labelOf(c.refLabel))}</strong>
+                </div>
+                <p>Both dataset label and model indicate ${esc(labelOf(c.refLabel))} (${a.confidence.toFixed(1)}%). Agreement does not validate clinical accuracy.</p>
+              </div>`;
+          }
+        } else {
+          cmpBox.innerHTML = `
+            <div class="ws-comparison-alert ws-comparison-upload" role="status">
+              <div class="comparison-alert-header">
+                <span class="badge badge-secondary">CUSTOM UPLOAD</span>
+                <strong>No dataset reference label</strong>
+              </div>
+              <p>Model predicted ${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%). No ground-truth label exists for this image.</p>
+            </div>`;
+        }
+      }
     } else {
       if (label) label.textContent = "Demo-only";
       card.hidden = true;
       setText("wsModelOutput", "Demo-only — no output shown");
+      if (cmpBox) {
+        cmpBox.hidden = true;
+        cmpBox.innerHTML = "";
+      }
     }
   }
 
@@ -1272,8 +1354,26 @@
     const a = c ? c.analysis : null;
 
     setText("clsCaseTitle", c ? `${c.id} · ${c.title}` : "No case selected");
-    setText("clsRefLabel", c && c.refLabel ? labelOf(c.refLabel) : "None");
-    setText("clsRefNote", c ? c.refNote : "A label supplied by the source dataset for this case. It is not a diagnosis for any person.");
+    if (c) {
+      if (c.refLabel) {
+        setText("clsRefLabel", labelOf(c.refLabel));
+        setText("clsRefNote", c.refNote || "A label supplied by the source dataset for this case. It is not a diagnosis for any person.");
+      } else if (c.source === "upload") {
+        setText("clsRefLabel", "None (custom upload)");
+        setText("clsRefNote", "Custom image upload: This image was provided by the user and does not have an expert annotation or ground-truth reference label.");
+      } else {
+        setText("clsRefLabel", "None");
+        setText("clsRefNote", "No reference label available for this case.");
+      }
+    } else {
+      setText("clsRefLabel", "—");
+      setText("clsRefNote", "A label supplied by the source dataset for this case. It is not a diagnosis for any person.");
+    }
+
+    const cmpCard = $("clsComparisonCard");
+    const cmpBadge = $("clsComparisonBadge");
+    const cmpTitle = $("clsComparisonTitle");
+    const cmpContent = $("clsComparisonContent");
 
     const notice = $("clsNotice");
     const badge = $("clsModeBadge");
@@ -1286,6 +1386,7 @@
       notice.innerHTML = "<strong>No case open:</strong> choose a case from the library first.";
       verdict.hidden = true;
       probSection.hidden = true;
+      if (cmpCard) cmpCard.hidden = true;
       setText("clsLatency", "—");
       setText("clsMaskState", "—");
     } else if (!a) {
@@ -1294,6 +1395,7 @@
       notice.innerHTML = `${describeModel().notice}<br><br><strong>No model output yet:</strong> use “Run experimental model”.`;
       verdict.hidden = true;
       probSection.hidden = true;
+      if (cmpCard) cmpCard.hidden = true;
       setText("clsLatency", "—");
       setText("clsMaskState", "—");
     } else if (!a.trained) {
@@ -1302,6 +1404,7 @@
       notice.innerHTML = `<strong>Demo-only — no prediction shown.</strong> ${esc(a.note || "")}`;
       verdict.hidden = true;
       probSection.hidden = true;
+      if (cmpCard) cmpCard.hidden = true;
       setText("clsLatency", a.latencyMs != null ? `${a.latencyMs} ms` : "—");
       setText("clsMaskState", "No (demo-only)");
     } else {
@@ -1323,11 +1426,93 @@
       else uncertainty = "A high probability still does not make this a diagnosis; models trained on small datasets can be overconfident.";
 
       if (c.refLabel) {
-        uncertainty += c.refLabel === a.prediction
+        uncertainty += c.refLabel.toLowerCase() === a.prediction.toLowerCase()
           ? " The model output matches the dataset's reference label for this case — agreement does not validate the model."
-          : " The model output differs from the dataset's reference label for this case — a good prompt to look at the margins again.";
+          : " The model output differs from the dataset's reference label for this case — a good prompt to inspect the margins in the Ultrasound Workspace.";
+      } else if (c.source === "upload") {
+        uncertainty += " Custom image upload: No ground-truth label exists to compare with this prediction.";
       }
       setText("uncertaintyNote", uncertainty);
+
+      // Render prominent comparison banner card
+      if (cmpCard) {
+        cmpCard.hidden = false;
+        if (c.refLabel) {
+          const isDisagree = c.refLabel.toLowerCase() !== a.prediction.toLowerCase();
+          if (isDisagree) {
+            cmpBadge.className = "badge badge-warning";
+            cmpBadge.textContent = "⚠️ Disagreement detected";
+            cmpTitle.textContent = "Dataset Reference vs. Model Output Disagreement";
+            cmpContent.innerHTML = `
+              <div class="comparison-box-inner comparison-box-disagree">
+                <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:12px;">
+                  <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid var(--border-color);">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DATASET REFERENCE LABEL</span>
+                    <strong style="font-size:1.15rem; color:#69DFCE;">${esc(labelOf(c.refLabel))}</strong>
+                  </div>
+                  <div style="font-size:1.5rem; font-weight:700; color:var(--status-warning, #FFB547);">&ne;</div>
+                  <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid rgba(255,181,71,0.4);">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">EXPERIMENTAL MODEL PREDICTION</span>
+                    <strong style="font-size:1.15rem; color:var(--status-warning, #FFB547);">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
+                  </div>
+                </div>
+                <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
+                  ⚠️ The baseline model prediction diverges from the expert dataset reference label.
+                </p>
+                <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
+                  <strong>Educational learning moment:</strong> Disagreements provide valuable opportunities to examine ultrasound characteristics. Differences in border irregularity, posterior shadowing or enhancement, and tissue echogenicity can lead human annotators and computer vision models to differing conclusions. Review the Ultrasound Workspace and Explainability tab to compare the expert annotation and scan features.
+                </p>
+              </div>`;
+          } else {
+            cmpBadge.className = "badge badge-success";
+            cmpBadge.textContent = "✓ Reference & model agree";
+            cmpTitle.textContent = "Dataset Reference & Model Output Agreement";
+            cmpContent.innerHTML = `
+              <div class="comparison-box-inner comparison-box-agree">
+                <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:12px;">
+                  <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid var(--border-color);">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DATASET REFERENCE LABEL</span>
+                    <strong style="font-size:1.15rem; color:var(--status-success, #32D583);">${esc(labelOf(c.refLabel))}</strong>
+                  </div>
+                  <div style="font-size:1.5rem; font-weight:700; color:var(--status-success, #32D583);">=</div>
+                  <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid rgba(50,213,131,0.4);">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">EXPERIMENTAL MODEL PREDICTION</span>
+                    <strong style="font-size:1.15rem; color:var(--status-success, #32D583);">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
+                  </div>
+                </div>
+                <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
+                  ✓ Both the dataset reference label and experimental model indicate <strong>${esc(labelOf(c.refLabel))}</strong>.
+                </p>
+                <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
+                  <strong>Educational reminder:</strong> Model agreement on this single case does not indicate diagnostic accuracy or validate the model for clinical use. Models trained on limited exploratory splits can be overconfident or memorize artifacts.
+                </p>
+              </div>`;
+          }
+        } else {
+          cmpBadge.className = "badge badge-secondary";
+          cmpBadge.textContent = "Custom image upload";
+          cmpTitle.textContent = "Custom Upload — No Ground-Truth Comparison";
+          cmpContent.innerHTML = `
+            <div class="comparison-box-inner comparison-box-upload">
+              <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:12px;">
+                <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid var(--border-color);">
+                  <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DATASET REFERENCE LABEL</span>
+                  <strong style="font-size:1.05rem; color:var(--text-secondary);">None (custom upload)</strong>
+                </div>
+                <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid rgba(105,223,206,0.3);">
+                  <span style="font-size:0.75rem; color:var(--text-muted); display:block;">EXPERIMENTAL MODEL PREDICTION</span>
+                  <strong style="font-size:1.15rem; color:#69DFCE;">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
+                </div>
+              </div>
+              <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
+                ℹ️ This image has no dataset reference label or expert annotation.
+              </p>
+              <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
+                The experimental baseline produced an exploratory prediction of <strong>${esc(labelOf(a.prediction))}</strong> (${a.confidence.toFixed(1)}%). Because this is a user-provided image without ground truth, no comparison against a verified label is possible.
+              </p>
+            </div>`;
+        }
+      }
 
       const list = $("probBarsList");
       list.innerHTML = "";
@@ -1397,6 +1582,8 @@
       ids.forEach(id => { $(id).removeAttribute("src"); });
       $("exAnnOverlayImg").hidden = true;
       $("exModelOverlayImg").hidden = true;
+      const annEmptyInit = $("exAnnEmpty");
+      if (annEmptyInit) annEmptyInit.hidden = true;
       setText("exOriginalMeta", "No case open");
       setText("exAnnMeta", "No case open");
       setText("exModelEmpty", "No case open.");
@@ -1408,13 +1595,21 @@
     setText("exOriginalMeta", `${c.id} · ${c.source === "illustrative" ? "illustrative placeholder" : c.source === "upload" ? "your upload" : "public dataset"}`);
 
     const annOverlay = $("exAnnOverlayImg");
+    const annEmpty = $("exAnnEmpty");
     if (c.annotationUrl) {
       annOverlay.src = c.annotationUrl;
       annOverlay.hidden = false;
+      if (annEmpty) annEmpty.hidden = true;
       setText("exAnnMeta", c.source === "illustrative" ? "Illustrative outline (placeholder)" : "Expert annotation from the dataset");
     } else {
       annOverlay.hidden = true;
-      setText("exAnnMeta", "No dataset annotation for this case");
+      if (annEmpty) {
+        annEmpty.hidden = false;
+        annEmpty.textContent = c.source === "upload"
+          ? "No expert annotation available for this custom image upload."
+          : "No dataset annotation for this case.";
+      }
+      setText("exAnnMeta", c.source === "upload" ? "No expert annotation (custom upload)" : "No dataset annotation for this case");
     }
 
     const maskOverlay = $("exModelOverlayImg");
@@ -1470,6 +1665,7 @@
     list.forEach(item => {
       const canOpen = !!findCase(item.caseId);
       const tr = document.createElement("tr");
+      const refCol = item.refLabel ? esc(labelOf(item.refLabel)) : (item.source === "upload" ? "None (upload)" : "—");
       tr.innerHTML = `
         <td class="mono"><strong>${esc(item.id)}</strong></td>
         <td>${esc(item.ts)}</td>
@@ -1478,7 +1674,7 @@
           : "—"}</td>
         <td>${esc(item.caseId)} &middot; ${esc(item.title)}</td>
         <td>${item.action === "model" ? "Model run" : "Case opened"}</td>
-        <td class="mono">${item.refLabel ? esc(labelOf(item.refLabel)) : "—"}</td>
+        <td class="mono">${refCol}</td>
         <td class="mono">${esc(modelOutputText(item))}</td>
         <td>
           <button class="btn btn-secondary-sm" type="button" data-report="${esc(item.id)}">Report</button>
@@ -1556,7 +1752,7 @@
     setText("repDate", entry.ts);
     setText("repCaseTitle", `${entry.caseId} · ${entry.title}`);
     setText("repSource", entry.source === "illustrative" ? "Illustrative placeholder (not a real scan)" : entry.source === "upload" ? "User upload" : "Public dataset");
-    setText("repRefLabel", entry.refLabel ? `${labelOf(entry.refLabel)} — dataset reference label` : "None");
+    setText("repRefLabel", entry.refLabel ? `${labelOf(entry.refLabel)} — dataset reference label` : "None (custom upload — no dataset reference label)");
 
     scan.src = liveCase ? liveCase.imageUrl : (entry.thumb || "");
     scan.alt = `Scan for ${entry.caseId}`;
