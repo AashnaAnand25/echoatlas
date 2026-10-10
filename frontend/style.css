@@ -911,6 +911,50 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-muted);
 }
 
+/* Conceptual ultrasound sweep explainer */
+.scan-journey-card { overflow: hidden; }
+.scan-journey-header { align-items: flex-start; }
+.eyebrow { color: var(--accent-cyan); font-size: .72rem; font-weight: 700; letter-spacing: .12em; margin-bottom: 5px; }
+.scan-journey-layout { display: grid; grid-template-columns: minmax(280px, 1.05fr) minmax(300px, 1fr); gap: 24px; align-items: center; }
+.scan-sweep-scene {
+  min-height: 310px; position: relative; overflow: hidden; isolation: isolate; border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); background: radial-gradient(ellipse at 52% 40%, rgba(105,223,206,.14), transparent 58%), var(--bg-primary);
+  perspective: 850px;
+}
+.scan-scene-grid { position: absolute; inset: 0; opacity: .35; background-image: linear-gradient(rgba(105,223,206,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(105,223,206,.12) 1px,transparent 1px); background-size: 28px 28px; transform: rotateX(58deg) scale(1.35); transform-origin: center 70%; }
+.ultrasound-probe { position: absolute; z-index: 4; top: 42px; left: calc(50% - 48px); width: 96px; height: 46px; border-radius: 15px 15px 8px 8px; background: linear-gradient(145deg,#E6F3F4,#88A8B1 65%,#537381); box-shadow: 0 10px 28px rgba(0,0,0,.35); transform: rotateX(-12deg); }
+.ultrasound-probe::before { content:""; position:absolute; width:44px; height:34px; border-radius: 12px 12px 4px 4px; background:linear-gradient(90deg,#738B94,#D9E8E9,#718A94); top:-23px; left:26px; }
+.ultrasound-probe span { position:absolute; inset:auto 12px 5px; height:5px; border-radius:9px; background:var(--accent-teal); }
+.scan-beam { position:absolute; z-index:2; top:86px; left:calc(50% - 100px); width:200px; height:180px; background:linear-gradient(180deg,rgba(105,223,206,.28),rgba(105,223,206,.025)); clip-path:polygon(42% 0,58% 0,100% 100%,0 100%); filter:drop-shadow(0 0 10px rgba(105,223,206,.4)); }
+.tissue-volume { position:absolute; z-index:1; left:12%; right:12%; bottom:30px; height:138px; overflow:hidden; border:1px solid rgba(196,226,230,.45); border-radius:50% 50% 16px 16px / 22% 22% 12px 12px; transform:rotateX(8deg); background:linear-gradient(180deg,rgba(116,155,164,.5),rgba(41,75,90,.9)); box-shadow:0 16px 28px rgba(0,0,0,.3), inset 0 0 30px rgba(8,19,28,.55); }
+.tissue-layer { position:absolute; left:-5%; width:110%; height:30px; border-top:2px solid rgba(225,244,242,.52); border-radius:50%; transform:rotate(-3deg); }
+.layer-one { top:30px; }.layer-two { top:65px; opacity:.72; }.layer-three { top:101px; opacity:.48; }
+.tissue-lesion { position:absolute; left:47%; top:55px; width:38px; height:32px; background:radial-gradient(ellipse,#172832,#070F16 70%); border:1px solid rgba(210,230,230,.55); border-radius:46% 54% 55% 45%; box-shadow:0 0 12px rgba(2,8,12,.75); }
+.scan-plane { position:absolute; z-index:3; top:94px; bottom:39px; left:22%; width:56%; border-left:2px solid rgba(255,175,152,.8); border-right:2px solid rgba(105,223,206,.8); background:linear-gradient(90deg,rgba(105,223,206,.09),rgba(255,175,152,.12),rgba(105,223,206,.06)); transform:rotateY(-22deg) rotateX(8deg); transform-origin:center; }
+.scan-plane i { position:absolute; left:0; right:0; height:1px; background:rgba(235,250,248,.5); }.scan-plane i:nth-child(1){top:28%}.scan-plane i:nth-child(2){top:57%}.scan-plane i:nth-child(3){top:82%}
+.scan-sweep-playing .scan-plane { animation: scan-sweep 3.8s ease-in-out infinite alternate; }
+@keyframes scan-sweep { from { transform:translateX(-24px) rotateY(-28deg) rotateX(8deg) } to { transform:translateX(24px) rotateY(28deg) rotateX(8deg) } }
+.echo-wave { position:absolute; z-index:4; left:50%; top:73px; width:70px; height:20px; border-top:1px solid rgba(211,255,248,.8); border-radius:50%; transform:translateX(-50%); opacity:0; }
+.scan-sweep-playing .echo-one { animation: echo-return 2s ease-out infinite; }.scan-sweep-playing .echo-two { animation: echo-return 2s ease-out 1s infinite; }
+@keyframes echo-return { 0% { opacity:0; transform:translate(-50%,14px) scale(.55) } 25% { opacity:.9 } 100% { opacity:0; transform:translate(-50%,76px) scale(1.5) } }
+.scan-depth-label,.scan-slice-chip { position:absolute; z-index:5; color:var(--text-secondary); font:600 .65rem var(--font-mono); letter-spacing:.1em; }.scan-depth-top { top:19px; left:16px; }.scan-depth-bottom { bottom:12px; left:16px; }.scan-slice-chip { right:14px; bottom:12px; padding:4px 7px; border:1px solid var(--border-color); border-radius:5px; background:var(--bg-elevated); color:var(--accent-cyan); }
+.scan-steps { list-style:none; display:grid; gap:12px; }.scan-steps li { display:grid; grid-template-columns:32px 1fr; gap:10px; }.scan-steps li > span { color:var(--accent-cyan); font:700 .8rem var(--font-mono); padding-top:2px; }.scan-steps strong { display:block; font-size:.92rem; }.scan-steps p { color:var(--text-secondary); font-size:.8rem; margin-top:2px; }
+.dataset-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:17px 0 10px; }.dataset-counts div { display:grid; gap:1px; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-elevated); }.dataset-counts strong { color:var(--accent-cyan); font:700 1.05rem var(--font-mono); }.dataset-counts span { color:var(--text-secondary); font-size:.68rem; }
+.scan-illustration-note { color:var(--text-muted); font-size:.72rem; margin:8px 0; }
+.comparison-box-inner { border-radius:var(--radius-sm); padding:14px 16px; font-size:.875rem; line-height:1.55; }
+.comparison-box-disagree { background:rgba(255,181,71,.08); border:1px solid rgba(255,181,71,.45); border-left:5px solid var(--status-warning); }
+.comparison-box-agree { background:rgba(50,213,131,.08); border:1px solid rgba(50,213,131,.35); border-left:5px solid var(--status-success); }
+.comparison-box-upload { background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent-cyan) 30%,transparent); border-left:5px solid var(--accent-cyan); }
+.ws-comparison-alert { padding:10px 12px; border-radius:var(--radius-sm); margin:10px 0 6px; font-size:.8125rem; line-height:1.45; }
+.ws-comparison-alert p { margin:4px 0 0; font-size:.75rem; color:var(--text-secondary); }
+.ws-comparison-alert.ws-comparison-disagree { background:rgba(255,181,71,.1); border:1px solid rgba(255,181,71,.4); }
+.ws-comparison-alert.ws-comparison-agree { background:rgba(50,213,131,.08); border:1px solid rgba(50,213,131,.3); }
+.ws-comparison-alert.ws-comparison-upload { background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent-cyan) 25%,transparent); }
+.comparison-alert-header { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+@media (max-width: 900px) { .scan-journey-layout { grid-template-columns:1fr; } .scan-sweep-scene { min-height:280px; } }
+@media (max-width: 520px) { .scan-journey-header { flex-direction:column; } .dataset-counts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (prefers-reduced-motion: reduce) { .scan-sweep-playing .scan-plane,.scan-sweep-playing .echo-one,.scan-sweep-playing .echo-two { animation:none; } }
+
 /* ==========================================================================
    VIEW 1: 5 CLINICAL BENCHMARK MRI SHOWCASE (LARGE & CRISP)
    ========================================================================== */

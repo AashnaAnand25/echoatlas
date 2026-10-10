@@ -518,6 +518,25 @@
     switchTab(el.getAttribute("data-tab"));
   });
 
+  const scanSweepToggle = $("scanSweepToggle");
+  const scanSweepScene = $("scanSweepScene");
+  if (scanSweepToggle && scanSweepScene) {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      scanSweepScene.classList.remove("scan-sweep-playing");
+      scanSweepToggle.setAttribute("aria-pressed", "false");
+      scanSweepToggle.textContent = "Animation reduced";
+      scanSweepToggle.disabled = true;
+    } else {
+      scanSweepToggle.addEventListener("click", () => {
+        const playing = scanSweepToggle.getAttribute("aria-pressed") === "true";
+        scanSweepToggle.setAttribute("aria-pressed", String(!playing));
+        scanSweepScene.classList.toggle("scan-sweep-playing", !playing);
+        scanSweepToggle.textContent = playing ? "Play animation" : "Pause animation";
+      });
+    }
+  }
+
   const brand = $("brandHomeBtn");
   brand.addEventListener("click", () => switchTab("overview"));
   brand.addEventListener("keydown", e => {
@@ -1089,10 +1108,10 @@
           cmpBox.innerHTML = `
             <div class="ws-comparison-alert ws-comparison-upload" role="status">
               <div class="comparison-alert-header">
-                <span class="badge badge-secondary">CUSTOM UPLOAD</span>
+                <span class="badge badge-secondary">${c.source === "upload" ? "CUSTOM UPLOAD" : "NO REFERENCE LABEL"}</span>
                 <strong>No dataset reference label</strong>
               </div>
-              <p>Model predicted ${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%). No ground-truth label exists for this image.</p>
+              <p>Model predicted ${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%). ${c.source === "upload" ? "No ground-truth label exists for this image." : "No reference label is available for comparison."}</p>
             </div>`;
         }
       }
@@ -1448,7 +1467,7 @@
                 <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:12px;">
                   <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid var(--border-color);">
                     <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DATASET REFERENCE LABEL</span>
-                    <strong style="font-size:1.15rem; color:#69DFCE;">${esc(labelOf(c.refLabel))}</strong>
+                  <strong style="font-size:1.15rem; color:var(--accent-cyan);">${esc(labelOf(c.refLabel))}</strong>
                   </div>
                   <div style="font-size:1.5rem; font-weight:700; color:var(--status-warning, #FFB547);">&ne;</div>
                   <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid rgba(255,181,71,0.4);">
@@ -1456,11 +1475,11 @@
                     <strong style="font-size:1.15rem; color:var(--status-warning, #FFB547);">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
                   </div>
                 </div>
-                <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
+                <p style="margin:0 0 8px 0; color:var(--text-primary); font-weight:600;">
                   ⚠️ The baseline model prediction diverges from the expert dataset reference label.
                 </p>
                 <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
-                  <strong>Educational learning moment:</strong> Disagreements provide valuable opportunities to examine ultrasound characteristics. Differences in border irregularity, posterior shadowing or enhancement, and tissue echogenicity can lead human annotators and computer vision models to differing conclusions. Review the Ultrasound Workspace and Explainability tab to compare the expert annotation and scan features.
+                  <strong>Learning prompt:</strong> The demo cannot explain why the model disagreed. Compare the scan and dataset annotation; a mismatch alone does not show which label is correct. The output is experimental and not a diagnosis.
                 </p>
               </div>`;
           } else {
@@ -1480,7 +1499,7 @@
                     <strong style="font-size:1.15rem; color:var(--status-success, #32D583);">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
                   </div>
                 </div>
-                <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
+                <p style="margin:0 0 8px 0; color:var(--text-primary); font-weight:600;">
                   ✓ Both the dataset reference label and experimental model indicate <strong>${esc(labelOf(c.refLabel))}</strong>.
                 </p>
                 <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
@@ -1490,25 +1509,26 @@
           }
         } else {
           cmpBadge.className = "badge badge-secondary";
-          cmpBadge.textContent = "Custom image upload";
-          cmpTitle.textContent = "Custom Upload — No Ground-Truth Comparison";
+          const isUpload = c.source === "upload";
+          cmpBadge.textContent = isUpload ? "Custom image upload" : "No reference label";
+          cmpTitle.textContent = isUpload ? "Custom Upload — No Ground-Truth Comparison" : "No Dataset Reference Label Available";
           cmpContent.innerHTML = `
             <div class="comparison-box-inner comparison-box-upload">
               <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:12px;">
                 <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid var(--border-color);">
                   <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DATASET REFERENCE LABEL</span>
-                  <strong style="font-size:1.05rem; color:var(--text-secondary);">None (custom upload)</strong>
+                  <strong style="font-size:1.05rem; color:var(--text-secondary);">${isUpload ? "None (custom upload)" : "None available"}</strong>
                 </div>
                 <div style="background:var(--bg-elevated); padding:8px 14px; border-radius:6px; border:1px solid rgba(105,223,206,0.3);">
                   <span style="font-size:0.75rem; color:var(--text-muted); display:block;">EXPERIMENTAL MODEL PREDICTION</span>
-                  <strong style="font-size:1.15rem; color:#69DFCE;">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
+                  <strong style="font-size:1.15rem; color:var(--accent-cyan);">${esc(labelOf(a.prediction))} (${a.confidence.toFixed(1)}%)</strong>
                 </div>
               </div>
-              <p style="margin:0 0 8px 0; color:#FFF; font-weight:600;">
-                ℹ️ This image has no dataset reference label or expert annotation.
+              <p style="margin:0 0 8px 0; color:var(--text-primary); font-weight:600;">
+                ℹ️ ${isUpload ? "This image has no dataset reference label or expert annotation." : "No dataset reference label is available for this case."}
               </p>
               <p style="margin:0; color:var(--text-secondary); font-size:0.8125rem; line-height:1.55;">
-                The experimental baseline produced an exploratory prediction of <strong>${esc(labelOf(a.prediction))}</strong> (${a.confidence.toFixed(1)}%). Because this is a user-provided image without ground truth, no comparison against a verified label is possible.
+                ${isUpload ? `The experimental baseline produced an exploratory prediction of <strong>${esc(labelOf(a.prediction))}</strong> (${a.confidence.toFixed(1)}%). Because this is a user-provided image without ground truth, no comparison against a verified label is possible.` : `The experimental baseline produced an exploratory prediction of <strong>${esc(labelOf(a.prediction))}</strong> (${a.confidence.toFixed(1)}%). There is no dataset reference label available for comparison.`}
               </p>
             </div>`;
         }
@@ -1752,7 +1772,7 @@
     setText("repDate", entry.ts);
     setText("repCaseTitle", `${entry.caseId} · ${entry.title}`);
     setText("repSource", entry.source === "illustrative" ? "Illustrative placeholder (not a real scan)" : entry.source === "upload" ? "User upload" : "Public dataset");
-    setText("repRefLabel", entry.refLabel ? `${labelOf(entry.refLabel)} — dataset reference label` : "None (custom upload — no dataset reference label)");
+    setText("repRefLabel", entry.refLabel ? `${labelOf(entry.refLabel)} — dataset reference label` : entry.source === "upload" ? "None (custom upload — no dataset reference label)" : "No dataset reference label available");
 
     scan.src = liveCase ? liveCase.imageUrl : (entry.thumb || "");
     scan.alt = `Scan for ${entry.caseId}`;
