@@ -29,3 +29,18 @@ Reproduce with:
 ```bash
 python scripts/train_busi_baseline.py --epochs 20 --device auto
 ```
+
+## SNU CUDA run on the identical split
+
+A second 20-epoch run used the same seed, configuration, and exact manifest (SHA-256 `2dcc63d21ddd2c94019e6cf821a64466bf43d3e6303568e758a8e4a851ff528b`) on an NVIDIA RTX 4090 with PyTorch `2.11.0+cu128`. The best checkpoint was selected at epoch 11 by validation macro-F1.
+
+| Task | Metric | Validation | Held-out test |
+| --- | --- | ---: | ---: |
+| Classification | Accuracy | 0.782 | 0.667 |
+| Classification | Balanced accuracy | 0.846 | 0.617 |
+| Classification | Macro-F1 | 0.792 | 0.621 |
+| Classification | Macro mAP | 0.910 | 0.805 |
+| Segmentation | Mean Dice | 0.434 | 0.504 |
+| Segmentation | Mean IoU | 0.330 | 0.398 |
+
+The test set is the same 78 images as the MPS run. The SNU result is lower on test classification metrics and segmentation Dice, despite higher validation classification scores. This shows a substantial validation/test gap and variation between runs/environments; it does not establish that either device is generally better. Both results are single exploratory runs, not clinical evidence. A prior SNU run used a regenerated manifest with 77 test images and is not directly comparable, so it is intentionally excluded here.
