@@ -4,9 +4,9 @@
  *
  * Integration contract with the backend (see TEAM_PLAN.md):
  *   POST /predict -> {
- *     mode: "trained" | "mock" | ...,
- *     prediction: "benign" | "malignant",
- *     probabilities: { benign: 0.72, malignant: 0.28 },   // 0-1 (0-100 also accepted)
+ *     mode: "trained-baseline" | "trained" | "unavailable",
+ *     prediction: "normal" | "benign" | "malignant",
+ *     probabilities: { normal: 0.1, benign: 0.72, malignant: 0.18 },
  *     segmentation_mask: "data:image/png;base64,...",
  *     inference_time_ms: 42
  *   }
@@ -15,8 +15,8 @@
  *     [{ id, title, image, annotation_mask?, reference_label?, description?, source? }]
  *
  * Honesty rules enforced here:
- *   - Model output is shown ONLY when the response says mode === "trained"
- *     and the prediction is a benign/malignant class. Anything else is shown
+ *   - Model output is shown ONLY for an explicitly trained baseline/production model
+ *     and a recognized BUSI class. Anything else is shown
  *     as "demo-only" and the prediction is discarded.
  *   - Dataset annotations/labels and model output are always labelled separately.
  */
@@ -28,6 +28,7 @@
 
   // Classes the EchoAtlas UI understands.
   const CLASS_META = {
+    normal: { label: "Normal", badgeClass: "badge-success", color: "#8CE1B1" },
     benign: { label: "Benign", badgeClass: "badge-success", color: "#2EC4B6" },
     malignant: { label: "Malignant", badgeClass: "badge-warning", color: "#FF7F6E" }
   };
@@ -384,16 +385,25 @@
         trusted: false,
         short: "Checkpoint mismatch",
         bar: "CHECKPOINT MISMATCH · DEMO ONLY",
-        notice: `<strong>Demo-only — checkpoint does not match this task.</strong> The model reports classes (${esc(seen)}) instead of benign / malignant, so its output is not shown.`
+        notice: `<strong>Demo-only — checkpoint does not match this task.</strong> The model reports classes (${esc(seen)}) instead of the BUSI classes normal / benign / malignant, so its output is not shown.`
       };
     }
-    if (m.mode !== "trained") {
+    if (m.mode !== "trained" && m.mode !== "trained-baseline") {
       return {
         key: "demo",
         trusted: false,
         short: `Mode: ${m.mode}`,
         bar: "DEMO MODE · NO OUTPUT SHOWN",
         notice: `<strong>Demo-only — the API reports mode “${esc(m.mode)}”.</strong> Only a trained checkpoint's output is shown as a prediction.`
+      };
+    }
+    if (m.mode === "trained-baseline") {
+      return {
+        key: "baseline",
+        trusted: true,
+        short: "Experimental U-Net baseline",
+        bar: "BASELINE READY · EXPERIMENTAL",
+        notice: "<strong>Experimental U-Net baseline loaded.</strong> This is not the MaskFormer model from the research paper and is not a diagnosis."
       };
     }
     return {
@@ -586,9 +596,9 @@
     setText("libraryCountBadge", `${state.cases.length} case${state.cases.length === 1 ? "" : "s"}`);
 
     if (state.caseSource === "illustrative") {
-      setHtml("libraryNote", "<strong>Illustrative placeholder cases:</strong> these six pictures are generated for the demo flow &mdash; they are <strong>not real patient scans</strong>, and their labels and outlines are illustrative. Real BrEaST cases appear here when the model API serves them from <code>/api/cases</code>.");
+      setHtml("libraryNote", "<strong>Illustrative placeholder cases:</strong> these six pictures are generated for the demo flow &mdash; they are <strong>not real patient scans</strong>, and their labels and outlines are illustrative. Real BUSI cases appear here when the prepared dataset is available to the API at <code>/api/cases</code>.");
     } else {
-      setHtml("libraryNote", "<strong>Public dataset cases:</strong> de-identified cases served by the model API (BrEaST / Breast-Lesions-USG, CC BY 4.0). Labels shown are the dataset's reference labels, not diagnoses.");
+      setHtml("libraryNote", "<strong>Public dataset cases:</strong> de-identified BUSI examples served by the API. Labels shown are dataset reference labels, not diagnoses. BUSI provides no reliable patient IDs, so this demo does not claim patient-level separation.");
     }
   }
 
@@ -999,7 +1009,7 @@
 
     const a = c.analysis;
     if (a.trained) {
-      if (label) label.textContent = "Trained model";
+      if (label) label.textContent = a.mode === "trained-baseline" ? "Experimental U-Net baseline" : "Trained model";
       card.hidden = false;
       setText("wsVerdictName", labelOf(a.prediction));
       const badge = $("wsVerdictBadge");
@@ -1213,14 +1223,14 @@
     const probs = normalizeProbs(result && result.probabilities);
     const latency = result && typeof result.inference_time_ms === "number" ? result.inference_time_ms : null;
 
-    const trained = mode === "trained" && !!CLASS_META[pred];
+    const trained = (mode === "trained" || mode === "trained-baseline") && !!CLASS_META[pred];
 
     if (!trained) {
       let reason;
-      if (mode !== "trained") {
-        reason = `The API reported mode “${mode}”, not “trained”. To avoid presenting a simulated result as a prediction, the output was discarded.`;
+      if (mode !== "trained" && mode !== "trained-baseline") {
+        reason = `The API reported mode “${mode}”, not a trained model. To avoid presenting a simulated result as a prediction, the output was discarded.`;
       } else {
-        reason = `The returned class “${pred || "none"}” is not benign or malignant, so it was discarded.`;
+        reason = `The returned class “${pred || "none"}” is not a recognized BUSI class, so it was discarded.`;
       }
       return {
         ts: new Date().toLocaleString(),
@@ -1250,7 +1260,7 @@
       probabilities: probs,
       maskUrl: result.segmentation_mask || null,
       latencyMs: latency,
-      note: result.segmentation_mask ? "Trained checkpoint output (experimental)." : "Trained checkpoint output (experimental). The API returned no segmentation mask."
+      note: result.segmentation_mask ? `${mode === "trained-baseline" ? "Experimental U-Net baseline" : "Trained checkpoint"} output; not a diagnosis.` : `${mode === "trained-baseline" ? "Experimental U-Net baseline" : "Trained checkpoint"} output; the API returned no segmentation mask.`
     };
   }
 
@@ -1295,7 +1305,7 @@
       setText("clsLatency", a.latencyMs != null ? `${a.latencyMs} ms` : "—");
       setText("clsMaskState", "No (demo-only)");
     } else {
-      badge.textContent = "Trained checkpoint";
+      badge.textContent = a.mode === "trained-baseline" ? "Experimental U-Net baseline" : "Trained checkpoint";
       notice.hidden = true;
       verdict.hidden = false;
       probSection.hidden = false;
@@ -1606,7 +1616,7 @@
     const exported = Object.assign({}, entry);
     delete exported.thumb;
     exported.disclaimer = "Educational use only. Dataset labels are reference labels; model output is experimental. Not a diagnosis.";
-    exported.dataset = "BrEaST / Breast-Lesions-USG (TCIA), CC BY 4.0";
+    exported.dataset = "BUSI (Breast Ultrasound Images Dataset), original data by Al-Dhabyani et al. (2020); mirror states CC BY 4.0";
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exported, null, 2));
     const dl = document.createElement("a");
     dl.setAttribute("href", dataStr);

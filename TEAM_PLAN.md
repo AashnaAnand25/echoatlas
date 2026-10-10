@@ -62,15 +62,15 @@ Agree before implementation. Suggested response from `POST /predict`:
 
 ```json
 {
-  "mode": "trained",
+  "mode": "trained-baseline",
   "prediction": "benign",
-  "probabilities": {"benign": 0.72, "malignant": 0.28},
+  "probabilities": {"normal": 0.08, "benign": 0.72, "malignant": 0.20},
   "segmentation_mask": "data:image/png;base64,...",
   "inference_time_ms": 42
 }
 ```
 
-`mode` must distinguish a trained checkpoint from a mock/demo. If no checkpoint is loaded, the UI should show that state and must not display a simulated class result as a prediction. Expert masks supplied with a case should be labeled **dataset annotation**, never **model output**.
+`mode` is `trained-baseline` for the included U-Net checkpoint and `unavailable` when no model loads. If no checkpoint is loaded, the UI should show that state and must not display a simulated class result as a prediction. Expert masks supplied with a case should be labeled **dataset annotation**, never **model output**. `/api/cases` returns BUSI samples when the local dataset is prepared; otherwise the UI uses visibly illustrative placeholders.
 
 ## Copy-ready prompts for teammates
 

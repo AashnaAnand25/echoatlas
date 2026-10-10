@@ -3016,8 +3016,18 @@ button:disabled, [aria-disabled="true"] {
 .toast-container { max-width: calc(100% - 2rem); right: 1rem; bottom: 1rem; }
 .toast { overflow-wrap: anywhere; }
 
-/* Optional Person 3 hook: <a class="skip-link" href="#main-content">…</a>.
-   Add id="main-content" and tabindex="-1" to main in their HTML work. */
+/* Skip link and visually hidden text utilities used by the accessible UI. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .skip-link {
   position: fixed;
   top: 0.75rem;

@@ -6,19 +6,7 @@
   <title>EchoAtlas — Accessible Breast-Ultrasound Case-Learning Workstation</title>
   <meta name="description" content="EchoAtlas is an educational, non-diagnostic breast-ultrasound case explorer: compare a public case's scan, its dataset annotation, and an experimental model mask.">
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="style.css">
-
-  <!-- Fallback accessibility utilities (move into style.css when Person 2 adds them) -->
-  <style>
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 10000; padding: 8px 14px; background: #0b1f33; color: #fff; border: 2px solid #2EC4B6; border-radius: 6px; }
-    .skip-link:focus { left: 8px; }
-  </style>
 </head>
 <body>
 
@@ -679,7 +667,7 @@
           <div class="view-header">
             <div>
               <h1 class="view-title" id="title-classification" tabindex="-1">Classification: label vs. model output</h1>
-              <p class="view-subtitle">Benign / malignant output from the experimental model, shown separately from the dataset's reference label. Neither is a diagnosis.</p>
+              <p class="view-subtitle">Normal / benign / malignant output from the experimental baseline, shown separately from the dataset's reference label. Neither is a diagnosis.</p>
             </div>
             <div class="view-header-actions">
               <button class="btn btn-secondary" type="button" data-tab="workspace">
@@ -765,7 +753,7 @@
             <div class="card-header">
               <div>
                 <h2 class="card-title">Held-out evaluation (reported by the model API)</h2>
-                <p class="card-desc">Metrics are measured on held-out cases, split by patient/case ID. They appear here only if the API reports them.</p>
+                <p class="card-desc">Metrics are from the held-out image-level exploratory split, not patient-level validation. They appear only when the API reports a saved evaluation.</p>
               </div>
               <span class="badge badge-secondary" id="clsMetricsBadge">Not reported</span>
             </div>
@@ -1031,7 +1019,7 @@
                 <div class="report-section-label">TELEMETRY</div>
                 <div class="report-telemetry-grid mono">
                   <div>Inference time: <span id="repLatency">—</span></div>
-                  <div>Data: <span>BrEaST / Breast-Lesions-USG (TCIA), CC BY 4.0</span></div>
+                  <div>Data: <span>BUSI (Al-Dhabyani et al., 2020)</span></div>
                 </div>
               </div>
             </div>
@@ -1057,10 +1045,11 @@
           <div class="docs-grid">
             <div class="card doc-card">
               <h2 class="card-title">Dataset attribution</h2>
-              <p>The planned case source is the <strong>BrEaST / Breast-Lesions-USG</strong> collection on The Cancer Imaging Archive (TCIA): 256 patient cases, 522 ultrasound images, expert lesion annotations, and clinical labels, released under <strong>CC BY 4.0</strong>.</p>
+              <p>The case source is the <strong>Breast Ultrasound Images Dataset (BUSI)</strong>, with 780 images across normal, benign, and malignant classes and expert lesion masks. The project uses a CC BY 4.0 mirror of the original dataset by Al-Dhabyani et al.</p>
               <ul class="doc-list">
-                <li><a href="https://www.cancerimagingarchive.net/collection/breast-lesions-usg/" target="_blank" rel="noopener noreferrer">Collection page on TCIA</a></li>
-                <li><a href="https://doi.org/10.1038/s41597-024-02984-z" target="_blank" rel="noopener noreferrer">Dataset paper (Scientific Data, doi:10.1038/s41597-024-02984-z)</a></li>
+                <li><a href="https://scholar.cu.edu.eg/?q=afahmy/pages/dataset" target="_blank" rel="noopener noreferrer">Official BUSI dataset page</a></li>
+                <li><a href="https://huggingface.co/datasets/MedOtter/BUSI" target="_blank" rel="noopener noreferrer">BUSI mirror and data-quality notes (CC BY 4.0)</a></li>
+                <li><a href="https://doi.org/10.1016/j.dib.2019.104863" target="_blank" rel="noopener noreferrer">Original dataset paper (Data in Brief, doi:10.1016/j.dib.2019.104863)</a></li>
                 <li>Raw images are not redistributed in this repository; download and cite the dataset from the source.</li>
               </ul>
               <p class="card-desc">The app's workstation interface is adapted from the MIT-licensed <a href="https://github.com/atleekumaar/brain-tumor-mri-classifier" target="_blank" rel="noopener noreferrer">atleekumaar/brain-tumor-mri-classifier</a> project.</p>
@@ -1069,10 +1058,10 @@
             <div class="card doc-card">
               <h2 class="card-title">Split protocol &amp; metrics</h2>
               <ul class="doc-list">
-                <li>Data is split by patient/case ID so images from the same case never appear in both training and test sets.</li>
-                <li>Augmentation is applied to the training split only.</li>
+                <li>The provided split groups exact and near-duplicate candidates, then stratifies by image label. BUSI has no reliable public patient IDs, so it is not a patient-level split.</li>
+                <li>Horizontal-flip augmentation is applied to the training split only.</li>
                 <li>Segmentation is reported with Dice and IoU on held-out cases.</li>
-                <li>Classification (benign vs. malignant, where a usable reference label exists) is reported with AUROC, balanced accuracy, and macro-F1.</li>
+                <li>Three-class classification (normal, benign, malignant) is reported with accuracy, balanced accuracy, macro-F1, and macro mAP.</li>
                 <li>Any earlier score from a different dataset (for example a prior 94.3% result) is <strong>not</strong> assumed to transfer.</li>
               </ul>
             </div>
@@ -1081,7 +1070,7 @@
               <h2 class="card-title">Limitations</h2>
               <ul class="doc-list">
                 <li>Small, single-collection dataset; results may not generalize to other scanners, sites, or populations.</li>
-                <li>If the BUSI fallback dataset is used, it lacks reliable public patient IDs and duplicate leakage has been reported; any result is image-level and exploratory, not patient-level validation.</li>
+                <li>BUSI has no reliable public patient IDs. The duplicate audit flags 124 candidate groups, including 8 groups that cross source labels. Results are image-level and exploratory, not patient-level validation.</li>
                 <li>Illustrative placeholder cases in this demo are generated pictures, not real patient scans.</li>
                 <li>No fabricated model output is ever shown: when no trained checkpoint is loaded, the app says so.</li>
               </ul>
