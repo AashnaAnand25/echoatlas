@@ -119,6 +119,12 @@
               </button>
             </li>
             <li>
+              <button class="sidebar-item" type="button" data-tab="practice">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+                <span>Practice Lab</span>
+              </button>
+            </li>
+            <li>
               <button class="sidebar-item" type="button" data-tab="workspace">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 18a9 9 0 0 1 18 0"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/><circle cx="12" cy="18" r="1.5"/><path d="M12 3v4"/></svg>
                 <span>Ultrasound Workspace</span>
@@ -253,28 +259,9 @@
             </div>
           </section>
 
-          <section class="card case-orbit-card" aria-labelledby="caseOrbitTitle">
-            <div class="card-header case-orbit-header">
-              <div><p class="eyebrow mono">INTERACTIVE CASE VIEWER</p><h2 class="card-title" id="caseOrbitTitle">Tilt a real 2D scan in 3D space</h2><p class="card-desc">Rotate the image plane and step through cases. The perspective is visual only; it does not create extra ultrasound slices.</p></div>
-              <span class="badge badge-secondary mono" id="orbitCaseLabel">Loading case…</span>
-            </div>
-            <div class="case-orbit-layout">
-              <div class="case-orbit-stage" id="caseOrbitStage" role="group" aria-label="Interactive 2D scan plane. Drag horizontally to tilt the visual display; use the angle slider for precise control.">
-                <div class="case-orbit-grid" aria-hidden="true"></div>
-                <div class="case-orbit-plane" id="caseOrbitPlane"><img id="caseOrbitImage" alt="Selected breast ultrasound case shown as a 2D scan plane"></div>
-                <div class="orbit-axis axis-x" aria-hidden="true"></div><div class="orbit-axis axis-y" aria-hidden="true"></div>
-                <span class="orbit-stamp mono">2D SOURCE IMAGE</span>
-                <span class="orbit-drag-cue" aria-hidden="true">↔ DRAG TO TILT</span>
-              </div>
-              <div class="case-orbit-controls">
-                <div class="orbit-case-meta"><span class="metric-label">SELECTED CASE</span><strong id="orbitCaseTitle">Loading available cases…</strong><span id="orbitCaseReference">Dataset reference label shown separately</span></div>
-                <div class="orbit-nav-controls"><button class="btn btn-secondary" id="orbitPrevCase" type="button" aria-label="Previous case">← Previous</button><button class="btn btn-secondary" id="orbitNextCase" type="button" aria-label="Next case">Next →</button></div>
-                <label class="orbit-slider-label" for="caseOrbitAngle"><span>Image-plane angle</span><output id="caseOrbitAngleValue" for="caseOrbitAngle">0°</output></label>
-                <input id="caseOrbitAngle" class="orbit-angle-slider" type="range" min="-35" max="35" value="0" step="1" aria-describedby="orbitAngleHelp">
-                <p id="orbitAngleHelp" class="scan-illustration-note">Drag the scan left or right, or use the slider and arrow keys. This changes only the 3D display angle; the original 2D scan data remains unchanged.</p>
-                <button class="btn btn-primary btn-block" id="orbitOpenCase" type="button" disabled>Open this case</button>
-              </div>
-            </div>
+          <section class="card impact-context-card" aria-labelledby="impactContextTitle">
+            <div class="impact-stat-block"><span class="eyebrow mono">GLOBAL CONTEXT · WHO 2024 ESTIMATE</span><strong>2.4M</strong><span>women diagnosed with breast cancer worldwide</span><small>694,000 deaths globally in 2024</small></div>
+            <div class="impact-context-copy"><h2 class="card-title" id="impactContextTitle">Learning access is part of the equity challenge</h2><p class="card-desc">WHO reports that in low-HDI countries, about 1 in 48 women die from breast cancer, compared with 1 in 71 in very-high-HDI countries. EchoAtlas is a small educational prototype: it makes annotated examples available for practice, and has not been shown to change screening or health outcomes.</p><div class="impact-context-actions"><a href="https://www.who.int/news-room/fact-sheets/detail/breast-cancer" target="_blank" rel="noopener noreferrer">Read the WHO source ↗</a><button class="btn btn-primary-sm" type="button" data-tab="practice">Try the practice lab</button></div></div>
           </section>
 
           <div class="metrics-grid">
@@ -398,6 +385,31 @@
               <div class="simulator-copy"><ol><li><strong>Move the probe</strong><span>The probe sends short sound pulses into tissue.</span></li><li><strong>Listen for echoes</strong><span>Different boundaries reflect sound back at different times.</span></li><li><strong>Build a 2D view</strong><span>The scanner maps echo timing and strength into image pixels.</span></li></ol><p class="simulator-caveat">Conceptual animation only. BUSI contains 2D images and does not provide a 3D sweep volume.</p><button class="btn btn-primary" type="button" data-tab="library">Explore a BUSI case →</button></div>
             </div>
           </section>
+        </section>
+
+        <section class="tab-view" id="view-practice" aria-labelledby="title-practice">
+          <div class="view-header">
+            <div><h1 class="view-title" id="title-practice" tabindex="-1">Practice reading a case</h1><p class="view-subtitle">Make an educational observation, then reveal what the BUSI dataset records and inspect its annotation.</p></div>
+          </div>
+          <div class="practice-layout">
+            <section class="card practice-scan-card" aria-label="Practice case image">
+              <div class="practice-case-top"><span class="eyebrow mono">BLIND CASE STUDY</span><span class="badge badge-secondary mono" id="practiceCaseCount">No session</span></div>
+              <img id="practiceImage" class="practice-image" alt="A public BUSI ultrasound case. Dataset label hidden until you make a practice selection." hidden>
+              <div class="practice-mask-wrap" id="practiceMaskWrap" hidden><img id="practiceMask" alt="BUSI dataset lesion annotation for the revealed case"><span>DATASET ANNOTATION</span></div>
+              <div class="practice-empty" id="practiceEmpty"><strong>Start a guided practice round</strong><span>We’ll show one public BUSI case at a time and keep its reference label hidden until you make your selection.</span><button class="btn btn-primary" id="practiceStartBtn" type="button">Start practice round</button></div>
+            </section>
+            <section class="card practice-controls-card" aria-labelledby="practiceQuestionTitle">
+              <div class="practice-score-row"><div><span class="metric-label">SESSION MATCHES</span><strong id="practiceScore">0 / 0</strong></div><span class="badge badge-cyan">Not a diagnostic quiz</span></div>
+              <p class="eyebrow mono">YOUR OBSERVATION</p><h2 class="card-title" id="practiceQuestionTitle">Which reference class is recorded for this example?</h2>
+              <p class="card-desc">Look at the image and choose a class before revealing the dataset label. This is practice with a public dataset annotation, not a patient assessment.</p>
+              <div class="practice-answer-grid" id="practiceAnswers" role="group" aria-label="Choose an educational practice label">
+                <button class="practice-answer" type="button" data-practice-answer="normal">Normal</button><button class="practice-answer" type="button" data-practice-answer="benign">Benign</button><button class="practice-answer" type="button" data-practice-answer="malignant">Malignant</button>
+              </div>
+              <div class="practice-feedback" id="practiceFeedback" role="status" aria-live="polite" hidden></div>
+              <div class="practice-actions"><button class="btn btn-secondary" id="practiceNextBtn" type="button" disabled>Next case</button><button class="btn btn-primary" id="practiceWorkspaceBtn" type="button" disabled>Inspect model &amp; masks</button></div>
+              <p class="practice-privacy-note">Your selections stay in this browser session and are not uploaded or saved.</p>
+            </section>
+          </div>
         </section>
 
 
@@ -637,6 +649,7 @@
                   <img id="viewerImage" class="mri-active-image" alt="Breast ultrasound image" style="display:none;">
                   <img id="annotationLayer" class="mri-active-heatmap" alt="Dataset annotation overlay" style="display:none;">
                   <img id="modelMaskLayer" class="mri-active-heatmap" alt="Experimental model mask overlay" style="display:none;">
+                  <canvas id="maskDifferenceLayer" class="mask-difference-layer" aria-hidden="true"></canvas>
 
                   <div class="hud-top-left mono" id="hudZoomText">ZOOM: 100%</div>
                   <div class="hud-top-right mono">MODALITY: US (B-MODE)</div>
@@ -654,6 +667,7 @@
                   <button class="filter-pill" id="toggleModelBtn" type="button" aria-pressed="false" title="Toggle experimental model mask (M)">
                     Model mask
                   </button>
+                  <button class="filter-pill mask-audit-btn" id="toggleMaskDifferenceBtn" type="button" aria-pressed="false" aria-describedby="maskAuditNote" disabled>Mask difference lens</button>
                 </div>
 
                 <div class="viewer-adjusters">
@@ -673,6 +687,15 @@
                     <label class="adjuster-label mono" for="modelOpacitySlider">MSK</label>
                     <input type="range" id="modelOpacitySlider" min="10" max="100" value="70" class="mini-range" aria-label="Model mask opacity">
                   </div>
+                </div>
+              </div>
+
+              <div class="mask-audit-panel" aria-live="polite">
+                <div class="mask-audit-heading"><strong>WHERE DO THE MASKS DIFFER?</strong><span class="badge badge-secondary">Case-level comparison</span></div>
+                <p id="maskAuditNote" class="scan-illustration-note">Run the experimental model on a BUSI case with a dataset annotation to compare the two masks.</p>
+                <div class="mask-audit-legend" id="maskAuditLegend" hidden>
+                  <span><i class="legend-agreement"></i>Both masks</span><span><i class="legend-model-only"></i>Model only</span><span><i class="legend-reference-only"></i>Dataset mask only</span>
+                  <strong id="maskAuditScores">Dice — · IoU —</strong>
                 </div>
               </div>
 

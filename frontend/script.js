@@ -47,12 +47,11 @@
     history: [],
     historyCounter: 0,
     reportEntryId: null,
+    practice: { cases: [], index: 0, matches: 0, answered: false },
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
     atlasLocation: "Egypt",
-    atlasCaseIndex: 0,
-    atlasCaseAngle: 0,
     model: {
       online: false,
       loaded: false,
@@ -69,7 +68,8 @@
       annotationOpacity: 85,
       modelOpacity: 70,
       showAnnotation: false,
-      showModel: false
+      showModel: false,
+      showDifference: false
     }
   };
 
@@ -482,6 +482,7 @@
     overview: "Overview",
     library: "Case Library",
     simulator: "Probe Simulator",
+    practice: "Practice Lab",
     workspace: "Ultrasound Workspace",
     classification: "Classification",
     explainability: "Explainability",
@@ -507,6 +508,7 @@
 
     if (tabId === "overview") renderOverview();
     if (tabId === "library") renderLibrary();
+    if (tabId === "practice") renderPractice();
     if (tabId === "workspace") renderWorkspace();
     if (tabId === "classification") {
       const c = state.currentCase;
@@ -569,37 +571,6 @@
     }
   }
 
-  const orbitAngle = $("caseOrbitAngle");
-  function setCaseOrbitAngle(value) {
-    state.atlasCaseAngle = Math.max(-35, Math.min(35, Math.round(value)));
-    if (orbitAngle) orbitAngle.value = String(state.atlasCaseAngle);
-    setText("caseOrbitAngleValue", `${state.atlasCaseAngle}°`);
-    const plane = $("caseOrbitPlane");
-    if (plane) plane.style.setProperty("--case-yaw", `${state.atlasCaseAngle}deg`);
-  }
-  if (orbitAngle) orbitAngle.addEventListener("input", () => setCaseOrbitAngle(Number(orbitAngle.value)));
-  const orbitStage = $("caseOrbitStage");
-  if (orbitStage) {
-    let dragStartX = 0;
-    let dragStartAngle = 0;
-    orbitStage.addEventListener("pointerdown", event => {
-      if (event.button !== undefined && event.button !== 0) return;
-      if (event.target.closest("button, input, a")) return;
-      dragStartX = event.clientX;
-      dragStartAngle = state.atlasCaseAngle;
-      orbitStage.classList.add("is-dragging");
-      orbitStage.setPointerCapture(event.pointerId);
-      event.preventDefault();
-    });
-    orbitStage.addEventListener("pointermove", event => {
-      if (!orbitStage.classList.contains("is-dragging")) return;
-      setCaseOrbitAngle(dragStartAngle + (event.clientX - dragStartX) * 0.16);
-    });
-    const finishOrbitDrag = () => orbitStage.classList.remove("is-dragging");
-    orbitStage.addEventListener("pointerup", finishOrbitDrag);
-    orbitStage.addEventListener("pointercancel", finishOrbitDrag);
-    orbitStage.addEventListener("lostpointercapture", finishOrbitDrag);
-  }
   const scanSweepScene = $("scanSweepScene");
   const scanSweepToggle = $("scanSweepToggle");
   if (scanSweepScene && scanSweepToggle) {
@@ -617,9 +588,6 @@
       });
     }
   }
-  $("orbitPrevCase").addEventListener("click", () => { state.atlasCaseIndex -= 1; renderCaseOrbit(); });
-  $("orbitNextCase").addEventListener("click", () => { state.atlasCaseIndex += 1; renderCaseOrbit(); });
-
   const brand = $("brandHomeBtn");
   brand.addEventListener("click", () => switchTab("overview"));
   brand.addEventListener("keydown", e => {
@@ -795,6 +763,7 @@
     v.modelOpacity = 70;
     v.showAnnotation = false;
     v.showModel = false;
+    v.showDifference = false;
     $("brightnessSlider").value = 100;
     $("contrastSlider").value = 100;
     $("annotationOpacitySlider").value = 85;
@@ -947,37 +916,6 @@
     }
   }
 
-  function renderCaseOrbit() {
-    const image = $("caseOrbitImage");
-    const openButton = $("orbitOpenCase");
-    if (!image || !openButton) return;
-    const cases = state.cases.filter(c => c.source !== "upload");
-    if (!cases.length) {
-      image.removeAttribute("src");
-      setText("orbitCaseLabel", "No cases loaded");
-      setText("orbitCaseTitle", "Start the app to load example cases");
-      setText("orbitCaseReference", "No scan is displayed.");
-      openButton.disabled = true;
-      return;
-    }
-    state.atlasCaseIndex = (state.atlasCaseIndex % cases.length + cases.length) % cases.length;
-    const current = cases[state.atlasCaseIndex];
-    image.src = current.imageUrl;
-    image.alt = `${current.source === "illustrative" ? "Illustrative example" : "BUSI dataset"} ultrasound image for ${current.id}: ${current.title}`;
-    setText("orbitCaseLabel", `${state.atlasCaseIndex + 1} / ${cases.length} · ${current.source === "illustrative" ? "ILLUSTRATIVE" : "BUSI DATASET"}`);
-    setText("orbitCaseTitle", `${current.id} · ${current.title}`);
-    setText("orbitCaseReference", current.refLabel
-      ? `${labelOf(current.refLabel)} · dataset reference label`
-      : current.source === "illustrative" ? "Illustrative placeholder · not a real dataset label" : "No dataset reference label available");
-    openButton.disabled = false;
-    openButton.dataset.openCase = current.id;
-    const angle = $("caseOrbitAngle");
-    if (angle) angle.value = String(state.atlasCaseAngle);
-    setText("caseOrbitAngleValue", `${state.atlasCaseAngle}°`);
-    const plane = $("caseOrbitPlane");
-    if (plane) plane.style.setProperty("--case-yaw", `${state.atlasCaseAngle}deg`);
-  }
-
   function modelOutputText(entry) {
     if (entry.action === "viewed") return "—";
     if (entry.trained && entry.prediction) {
@@ -992,7 +930,6 @@
       ? "Illustrative placeholders (not real scans)"
       : "Public dataset cases");
     renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
-    renderCaseOrbit();
 
     const tbody = $("overviewRecentTbody");
     if (!tbody) return;
@@ -1018,11 +955,128 @@
   }
 
   // ---------------------------------------------------------------------
+  // Blind case practice (session-only; scored against dataset labels)
+  // ---------------------------------------------------------------------
+  const practiceState = state.practice;
+
+  function practiceEligibleCases() {
+    return state.cases.filter(c => c.source === "dataset" && c.refLabel && c.imageUrl);
+  }
+
+  function renderPractice() {
+    const c = practiceState.cases[practiceState.index];
+    const image = $("practiceImage");
+    const empty = $("practiceEmpty");
+    const answers = $("practiceAnswers");
+    const next = $("practiceNextBtn");
+    const inspect = $("practiceWorkspaceBtn");
+    const maskWrap = $("practiceMaskWrap");
+    if (!c) {
+      image.hidden = true;
+      maskWrap.hidden = true;
+      empty.hidden = false;
+      answers.hidden = true;
+      next.disabled = true;
+      inspect.disabled = true;
+      const available = practiceEligibleCases().length;
+      const title = empty.querySelector("strong");
+      const note = empty.querySelector("span");
+      const start = $("practiceStartBtn");
+      if (practiceState.cases.length && practiceState.index >= practiceState.cases.length) {
+        if (title) title.textContent = "Round complete";
+        if (note) note.textContent = `You matched ${practiceState.matches} of ${practiceState.cases.length} dataset reference labels. These are labels from BUSI, not clinical ground truth or diagnostic feedback.`;
+        if (start) start.textContent = "Play another round";
+      } else {
+        if (title) title.textContent = available ? "Start a guided practice round" : "Public cases are not loaded yet";
+        if (note) note.textContent = available
+          ? "We’ll show one public BUSI case at a time and keep its reference label hidden until you make your selection."
+          : "Practice needs public BUSI cases from the local backend. Start the app with the dataset prepared, then refresh this page.";
+        if (start) start.textContent = available ? "Start practice round" : "Cases unavailable";
+        if (start) start.disabled = !available;
+      }
+      setText("practiceCaseCount", "No active case");
+      setText("practiceScore", `${practiceState.matches} / ${practiceState.index}`);
+      setText("practiceFeedback", "");
+      $("practiceFeedback").hidden = true;
+      return;
+    }
+
+    empty.hidden = true;
+    image.hidden = false;
+    image.src = c.imageUrl;
+    image.alt = "BUSI breast ultrasound practice image; dataset reference label hidden";
+    setText("practiceCaseCount", `CASE ${practiceState.index + 1} / ${practiceState.cases.length}`);
+    setText("practiceScore", `${practiceState.matches} / ${practiceState.answered ? practiceState.index + 1 : practiceState.index}`);
+    answers.hidden = practiceState.answered;
+    answers.querySelectorAll("[data-practice-answer]").forEach(button => { button.disabled = practiceState.answered; });
+    next.disabled = !practiceState.answered;
+    next.textContent = practiceState.index === practiceState.cases.length - 1 ? "Finish round" : "Next case";
+    inspect.disabled = !practiceState.answered;
+    maskWrap.hidden = !practiceState.answered || !c.annotationUrl;
+    if (!maskWrap.hidden) $("practiceMask").src = c.annotationUrl;
+    const feedback = $("practiceFeedback");
+    feedback.hidden = !practiceState.answered;
+    if (practiceState.answered) {
+      const choice = practiceState.choice;
+      const matched = choice === c.refLabel.toLowerCase();
+      feedback.className = `practice-feedback ${matched ? "is-match" : "is-mismatch"}`;
+      feedback.textContent = `${matched ? "Your selection matches" : "Your selection differs from"} the BUSI dataset reference label: ${labelOf(c.refLabel)}. This is an educational dataset comparison, not a diagnosis.`;
+    }
+  }
+
+  function startPracticeRound() {
+    const eligible = practiceEligibleCases().slice();
+    for (let i = eligible.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [eligible[i], eligible[j]] = [eligible[j], eligible[i]];
+    }
+    practiceState.cases = eligible;
+    practiceState.index = 0;
+    practiceState.matches = 0;
+    practiceState.answered = false;
+    practiceState.choice = null;
+    renderPractice();
+    const firstAnswer = $("practiceAnswers").querySelector("[data-practice-answer]");
+    if (firstAnswer) firstAnswer.focus({ preventScroll: true });
+  }
+
+  $("practiceStartBtn").addEventListener("click", startPracticeRound);
+  $("practiceAnswers").addEventListener("click", event => {
+    const button = event.target.closest("[data-practice-answer]");
+    const c = practiceState.cases[practiceState.index];
+    if (!button || !c || practiceState.answered) return;
+    practiceState.choice = button.dataset.practiceAnswer;
+    practiceState.answered = true;
+    if (practiceState.choice === c.refLabel.toLowerCase()) practiceState.matches += 1;
+    renderPractice();
+    $("practiceNextBtn").focus({ preventScroll: true });
+  });
+  $("practiceNextBtn").addEventListener("click", () => {
+    if (!practiceState.answered) return;
+    practiceState.index += 1;
+    practiceState.answered = false;
+    practiceState.choice = null;
+    renderPractice();
+  });
+  $("practiceWorkspaceBtn").addEventListener("click", () => {
+    const c = practiceState.cases[practiceState.index];
+    if (c && practiceState.answered) openCase(c);
+  });
+
+  // ---------------------------------------------------------------------
   // Workspace
   // ---------------------------------------------------------------------
   const viewerImg = $("viewerImage");
   const annLayer = $("annotationLayer");
   const maskLayer = $("modelMaskLayer");
+  const maskDifferenceLayer = $("maskDifferenceLayer");
+  let maskDifferenceCacheKey = null;
+
+  function differenceKey(c) {
+    return c && c.analysis && c.analysis.trained
+      ? `${c.id}:${c.analysis.ts}:${c.annotationUrl || ""}`
+      : null;
+  }
 
   function currentMaskUrl() {
     const c = state.currentCase;
@@ -1039,6 +1093,10 @@
       el.style.maxWidth = "none";
       el.style.maxHeight = "none";
     });
+    maskDifferenceLayer.style.width = `${w}px`;
+    maskDifferenceLayer.style.height = `${h}px`;
+    maskDifferenceLayer.style.maxWidth = "none";
+    maskDifferenceLayer.style.maxHeight = "none";
   }
 
   viewerImg.addEventListener("load", () => {
@@ -1054,9 +1112,12 @@
     viewerImg.style.filter = `brightness(${v.brightness}%) contrast(${v.contrast}%)`;
 
     annLayer.style.transform = transform;
-    annLayer.style.opacity = v.showAnnotation ? v.annotationOpacity / 100 : 0;
+    annLayer.style.opacity = v.showAnnotation && !v.showDifference ? v.annotationOpacity / 100 : 0;
     maskLayer.style.transform = transform;
-    maskLayer.style.opacity = v.showModel ? v.modelOpacity / 100 : 0;
+    maskLayer.style.opacity = v.showModel && !v.showDifference ? v.modelOpacity / 100 : 0;
+    maskDifferenceLayer.style.transform = transform;
+    maskDifferenceLayer.style.display = v.showDifference ? "block" : "none";
+    maskDifferenceLayer.style.opacity = v.showDifference ? "0.92" : "0";
 
     setText("hudZoomText", `ZOOM: ${Math.round(v.zoom * 100)}%`);
 
@@ -1066,7 +1127,110 @@
     annBtn.setAttribute("aria-pressed", String(v.showAnnotation));
     mskBtn.classList.toggle("active", v.showModel);
     mskBtn.setAttribute("aria-pressed", String(v.showModel));
+    const diffBtn = $("toggleMaskDifferenceBtn");
+    diffBtn.classList.toggle("active", v.showDifference);
+    diffBtn.setAttribute("aria-pressed", String(v.showDifference));
+    diffBtn.textContent = v.showDifference ? "Hide mask difference lens" : "Show mask difference lens";
   }
+
+  function loadMaskImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("A mask image could not be loaded."));
+      image.src = src;
+    });
+  }
+
+  async function renderMaskDifference() {
+    const c = state.currentCase;
+    const modelUrl = currentMaskUrl();
+    if (!c || !c.annotationUrl || !modelUrl || !viewerImg.naturalWidth) {
+      throw new Error("This comparison needs a BUSI dataset annotation and an experimental model mask.");
+    }
+    const width = viewerImg.naturalWidth;
+    const height = viewerImg.naturalHeight;
+    const [referenceImage, modelImage] = await Promise.all([
+      loadMaskImage(c.annotationUrl),
+      loadMaskImage(modelUrl)
+    ]);
+    if (state.currentCase !== c || !maskDifferenceLayer) return;
+
+    const referenceCanvas = document.createElement("canvas");
+    const modelCanvas = document.createElement("canvas");
+    referenceCanvas.width = modelCanvas.width = width;
+    referenceCanvas.height = modelCanvas.height = height;
+    const referenceContext = referenceCanvas.getContext("2d", { willReadFrequently: true });
+    const modelContext = modelCanvas.getContext("2d", { willReadFrequently: true });
+    referenceContext.drawImage(referenceImage, 0, 0, width, height);
+    modelContext.drawImage(modelImage, 0, 0, width, height);
+    const referencePixels = referenceContext.getImageData(0, 0, width, height).data;
+    const modelPixels = modelContext.getImageData(0, 0, width, height).data;
+
+    maskDifferenceLayer.width = width;
+    maskDifferenceLayer.height = height;
+    const outputContext = maskDifferenceLayer.getContext("2d");
+    const output = outputContext.createImageData(width, height);
+    let referenceCount = 0;
+    let modelCount = 0;
+    let intersectionCount = 0;
+    for (let pixel = 0, offset = 0; pixel < width * height; pixel += 1, offset += 4) {
+      const reference = referencePixels[offset] > 127;
+      const prediction = modelPixels[offset] > 127;
+      if (reference) referenceCount += 1;
+      if (prediction) modelCount += 1;
+      if (reference && prediction) {
+        intersectionCount += 1;
+        output.data[offset] = 77;
+        output.data[offset + 1] = 226;
+        output.data[offset + 2] = 196;
+      } else if (prediction) {
+        output.data[offset] = 255;
+        output.data[offset + 1] = 183;
+        output.data[offset + 2] = 77;
+      } else if (reference) {
+        output.data[offset] = 255;
+        output.data[offset + 1] = 112;
+        output.data[offset + 2] = 125;
+      } else {
+        continue;
+      }
+      output.data[offset + 3] = 220;
+    }
+    outputContext.putImageData(output, 0, 0);
+    maskDifferenceCacheKey = differenceKey(c);
+    const denominator = referenceCount + modelCount;
+    const dice = denominator ? (2 * intersectionCount / denominator) : null;
+    const union = referenceCount + modelCount - intersectionCount;
+    const iou = union ? (intersectionCount / union) : null;
+    const legend = $("maskAuditLegend");
+    if (legend) legend.hidden = false;
+    setText("maskAuditScores", `Dice ${dice == null ? "—" : (dice * 100).toFixed(1) + "%"} · IoU ${iou == null ? "—" : (iou * 100).toFixed(1) + "%"}`);
+    setText("maskAuditNote", "Pixel overlap for this case only. Mint marks foreground overlap; amber marks model-only pixels; coral marks dataset-mask-only pixels. This comparison is experimental, not a clinical score or a held-out benchmark.");
+  }
+
+  const maskDifferenceButton = $("toggleMaskDifferenceBtn");
+  maskDifferenceButton.addEventListener("click", async () => {
+    if (state.viewer.showDifference) {
+      state.viewer.showDifference = false;
+      applyViewerTransforms();
+      return;
+    }
+    maskDifferenceButton.disabled = true;
+    setText("maskAuditNote", "Building the per-case mask comparison…");
+    try {
+      await renderMaskDifference();
+      state.viewer.showDifference = true;
+      state.viewer.showAnnotation = false;
+      state.viewer.showModel = false;
+      applyViewerTransforms();
+    } catch (error) {
+      setText("maskAuditNote", `${error.message} No comparison was shown.`);
+      showToast("Mask comparison unavailable for this case.", "error");
+    } finally {
+      maskDifferenceButton.disabled = !(state.currentCase && state.currentCase.annotationUrl && currentMaskUrl());
+    }
+  });
 
   function markInspected() {
     const c = state.currentCase;
@@ -1119,6 +1283,9 @@
       $("caseThumbnail").alt = "";
       $("toggleAnnotationBtn").disabled = true;
       $("toggleModelBtn").disabled = true;
+      $("toggleMaskDifferenceBtn").disabled = true;
+      $("maskAuditLegend").hidden = true;
+      setText("maskAuditNote", "Open a BUSI case, then run the experimental model to compare its mask with the dataset annotation.");
       $("runModelBtn").disabled = true;
       renderJourney();
       renderWorkspaceModelPanel();
@@ -1184,6 +1351,22 @@
     }
     $("toggleModelBtn").disabled = false;
     $("runModelBtn").disabled = false;
+    const canCompareMasks = !!(c.source !== "upload" && c.annotationUrl && currentMaskUrl());
+    $("toggleMaskDifferenceBtn").disabled = !canCompareMasks;
+    if (maskDifferenceCacheKey !== differenceKey(c)) {
+      $("maskAuditLegend").hidden = true;
+      setText("maskAuditScores", "Dice — · IoU —");
+    }
+    if (!canCompareMasks) {
+      $("maskAuditLegend").hidden = true;
+      setText("maskAuditNote", c.source === "upload"
+        ? "Custom uploads have no dataset reference mask, so pixel overlap cannot be calculated."
+        : !c.annotationUrl
+          ? "This case has no dataset annotation mask to compare."
+          : "Run the experimental model on this BUSI case to build the mask comparison.");
+    } else if ($( "maskAuditLegend").hidden) {
+      setText("maskAuditNote", "Build a per-case comparison between the dataset annotation and experimental model mask.");
+    }
 
     renderJourney();
     renderWorkspaceModelPanel();
@@ -1470,6 +1653,7 @@
     clearInterval(timer);
 
     c.analysis = analysis;
+    state.viewer.showDifference = false;
     c.progress.model = true;
     addHistoryEntry(c, "model", analysis);
 
