@@ -248,9 +248,9 @@
                     </defs>
 
                     <!-- Pan/Zoom container group -->
-                    <g id="mapTransformGroup" transform="translate(0, 0) scale(1)">
-                      <!-- Ocean background -->
-                      <rect x="0" y="0" width="1000" height="500" rx="12" fill="url(#oceanGrad)" class="map-ocean" />
+                    <g id="mapTransformGroup" style="transform-origin: 0px 0px;" transform="translate(0, 0) scale(1)">
+                      <!-- Ocean background (extended for smooth panning) -->
+                      <rect x="-1000" y="-500" width="3000" height="1500" fill="url(#oceanGrad)" class="map-ocean" />
 
                       <!-- Graticules (Latitude & Longitude grid) -->
                       <g class="map-graticules" stroke="rgba(105, 223, 206, 0.12)" stroke-width="0.75" fill="none">
@@ -301,8 +301,12 @@
 
                       <!-- Interactive Research Country Shapes (Clickable & Focusable) -->
                       <g class="map-interactive-regions">
+                        <!-- United States -->
+                        <path class="map-country" data-atlas-country="United States" tabindex="0" role="button" aria-label="United States: click to zoom and view CADBUSI Mayo Clinic research dataset" d="M 125 105 L 260 100 L 260 160 L 220 185 L 175 190 L 130 165 Z" />
                         <!-- Brazil -->
                         <path class="map-country" data-atlas-country="Brazil" tabindex="0" role="button" aria-label="Brazil: click to zoom and view BUS-BRA research dataset" d="M 270 270 L 335 280 L 380 310 L 375 355 L 340 375 L 295 345 L 280 340 L 295 290 Z" />
+                        <!-- United Kingdom -->
+                        <path class="map-country" data-atlas-country="United Kingdom" tabindex="0" role="button" aria-label="United Kingdom: click to zoom and view MMU Dataset A" d="M 488 92 L 500 88 L 504 115 L 490 120 Z" />
                         <!-- Spain -->
                         <path class="map-country" data-atlas-country="Spain" tabindex="0" role="button" aria-label="Spain: click to zoom and view UDIAT &amp; BUS-UCLM research datasets" d="M 460 135 L 498 130 L 502 160 L 465 162 Z" />
                         <!-- Netherlands -->
@@ -316,7 +320,9 @@
                         <!-- Pakistan -->
                         <path class="map-country" data-atlas-country="Pakistan" tabindex="0" role="button" aria-label="Pakistan: click to zoom and view BUS_UC research dataset" d="M 685 145 L 720 145 L 715 178 L 685 178 Z" />
                         <!-- China -->
-                        <path class="map-country" data-atlas-country="China" tabindex="0" role="button" aria-label="China: click to zoom and view BUSIS, GDPH&amp;SYSUCC, US3M, BUSI_WHU datasets" d="M 735 118 L 865 110 L 870 195 L 815 215 L 755 190 L 730 155 Z" />
+                        <path class="map-country" data-atlas-country="China" tabindex="0" role="button" aria-label="China: click to zoom and view 7 breast ultrasound research datasets" d="M 735 118 L 848 110 L 850 195 L 815 215 L 755 190 L 730 155 Z" />
+                        <!-- South Korea -->
+                        <path class="map-country" data-atlas-country="South Korea" tabindex="0" role="button" aria-label="South Korea: click to zoom and view AI-Hub Breast Cancer Ultrasound Dataset" d="M 855 140 L 872 140 L 872 160 L 860 160 L 855 152 Z" />
                         <!-- Thailand -->
                         <path class="map-country" data-atlas-country="Thailand" tabindex="0" role="button" aria-label="Thailand: click to zoom and view MID dataset" d="M 770 200 L 795 200 L 790 235 L 772 235 Z" />
                       </g>

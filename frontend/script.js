@@ -466,6 +466,121 @@
       loaded: false,
       map_x: 625,
       map_y: 146
+    },
+    {
+      name: "MMU-A",
+      dataset_name: "MMU Dataset A (Breast Ultrasound Lesion Detection Dataset)",
+      country: "United Kingdom",
+      collection_country: "United Kingdom",
+      location: "Manchester",
+      collection_location: "Manchester (Manchester Metropolitan University)",
+      images: 306,
+      image_count: 306,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "306 breast ultrasound images (246 benign, 60 malignant) with radiologist lesion annotations",
+      access: "Research access by request",
+      href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      source_url: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      publication_url: "https://doi.org/10.1109/JBHI.2017.2731873",
+      citation: "Yap, M. H., Pons, G., Martí, J., et al. (2018). Automated breast ultrasound lesions detection using convolutional neural networks. IEEE JBHI, 22(4), 1218-1226.",
+      source: "MMU / IEEE JBHI",
+      provenance_source: "IEEE JBHI & Manchester Metropolitan University repository",
+      loaded: false,
+      map_x: 494,
+      map_y: 101
+    },
+    {
+      name: "AI-Hub Korea",
+      dataset_name: "AI-Hub Breast Cancer Ultrasound Dataset (유방암 진단 의료 영상)",
+      country: "South Korea",
+      collection_country: "South Korea",
+      location: "Seoul",
+      collection_location: "Seoul & Participating Medical Centers (National Information Society Agency)",
+      images: 1200,
+      image_count: 1200,
+      count_type: "source-reported",
+      sample_unit: "patient cases",
+      cohort_details: "1,200 patient ultrasound cases (600 benign, 600 malignant) curated for Korean AI medical imaging research",
+      access: "Public research access via AI-Hub Safe Zone",
+      href: "https://www.aihub.or.kr",
+      source_url: "https://www.aihub.or.kr",
+      publication_url: "https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=realm&dataSetSn=175",
+      citation: "National Information Society Agency (NIA). (2020). Breast Cancer Diagnostic Medical Imaging Dataset. AI-Hub Korea.",
+      source: "AI-Hub / NIA South Korea",
+      provenance_source: "AI-Hub Korea (National Information Society Agency / MSIT)",
+      loaded: false,
+      map_x: 853,
+      map_y: 146
+    },
+    {
+      name: "TDSC-ABUS",
+      dataset_name: "TDSC-ABUS (Tumor Detection & Segmentation on 3D Automated Breast Ultrasound)",
+      country: "China",
+      collection_country: "China",
+      location: "Shenzhen & Guangzhou",
+      collection_location: "Shenzhen & Guangzhou (Perception Computing Lab & Collaborating Centers)",
+      images: 100,
+      image_count: 100,
+      count_type: "publication-reported",
+      sample_unit: "3D ABUS volumes",
+      cohort_details: "100 automated 3D breast ultrasound volumes with lesion masks and benign/malignant pathology labels",
+      access: "Public benchmark challenge",
+      href: "https://tdsc-abus2023.grand-challenge.org/",
+      source_url: "https://tdsc-abus2023.grand-challenge.org/",
+      publication_url: "https://arxiv.org/abs/2501.15588",
+      citation: "Perception Computing Lab. (2023). TDSC-ABUS Challenge Dataset. Grand Challenge.",
+      source: "Perception Computing Lab / Grand Challenge",
+      provenance_source: "TDSC-ABUS Challenge / arXiv:2501.15588",
+      loaded: false,
+      map_x: 817,
+      map_y: 187
+    },
+    {
+      name: "CADBUSI",
+      dataset_name: "CADBUSI (Computer-Aided Diagnosis for Breast Ultrasound Imaging)",
+      country: "United States",
+      collection_country: "United States",
+      location: "Rochester, MN",
+      collection_location: "Rochester, Minnesota (Mayo Clinic Health System)",
+      images: 756315,
+      image_count: 756315,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "79,281 exams across 60,688 patients; 756,315 images & 136,197 videos (68,645 benign, 10,636 malignant)",
+      access: "Public clinical research cohort · Mayo Clinic",
+      href: "https://doi.org/10.1007/s10278-025-01784-0",
+      source_url: "https://doi.org/10.1007/s10278-025-01784-0",
+      publication_url: "https://doi.org/10.1007/s10278-025-01784-0",
+      citation: "Hansen, T., et al. (2026). Computer-Aided Diagnosis for Breast Ultrasound Imagery Dataset. Journal of Imaging Informatics in Medicine, 10.1007/s10278-025-01784-0.",
+      source: "Mayo Clinic Health System / JIIM",
+      provenance_source: "Journal of Imaging Informatics in Medicine & Mayo Clinic Health System",
+      loaded: false,
+      map_x: 195,
+      map_y: 145
+    },
+    {
+      name: "BUI-FEI",
+      dataset_name: "BUI-FEI (Breast Ultrasound Image Dataset by Rodrigues)",
+      country: "Brazil",
+      collection_country: "Brazil",
+      location: "São Paulo",
+      collection_location: "São Bernardo do Campo, São Paulo (Centro Universitário FEI)",
+      images: 250,
+      image_count: 250,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "250 ultrasound images from female patients (100 benign, 150 malignant)",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/wmy84gzngw/1",
+      source_url: "https://data.mendeley.com/datasets/wmy84gzngw/1",
+      publication_url: "https://doi.org/10.17632/wmy84gzngw.1",
+      citation: "Rodrigues, P. S. (2017). Breast Ultrasound Image. Mendeley Data, V1, doi: 10.17632/wmy84gzngw.1.",
+      source: "Centro Universitário FEI / Mendeley Data",
+      provenance_source: "Mendeley Data & Centro Universitário FEI",
+      loaded: false,
+      map_x: 335,
+      map_y: 325
     }
   ];
 
@@ -919,7 +1034,26 @@
   });
 
   const atlasSearch = $("atlasSearch");
-  if (atlasSearch) atlasSearch.addEventListener("input", () => renderAtlas(atlasSearch.value));
+  if (atlasSearch) {
+    atlasSearch.addEventListener("input", () => {
+      const q = atlasSearch.value.trim().toLowerCase();
+      const match = Object.keys(COUNTRY_FOCAL_POINTS).find(c => c.toLowerCase() === q);
+      if (match) {
+        selectMapCountry(match, true);
+      } else {
+        renderAtlas(atlasSearch.value);
+      }
+    });
+    atlasSearch.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const q = atlasSearch.value.trim().toLowerCase();
+        const match = Object.keys(COUNTRY_FOCAL_POINTS).find(c => c.toLowerCase() === q);
+        if (match) {
+          selectMapCountry(match, true);
+        }
+      }
+    });
+  }
   const atlasSearchClear = $("atlasSearchClear");
   if (atlasSearchClear) atlasSearchClear.addEventListener("click", () => {
     atlasSearch.value = "";
@@ -995,6 +1129,15 @@
       applyMapTransform();
     });
 
+    let lastCountryClickTime = 0;
+    function handleCountryClick(countryName) {
+      if (!countryName) return;
+      const now = Date.now();
+      if (now - lastCountryClickTime < 300) return;
+      lastCountryClickTime = now;
+      selectMapCountry(countryName, true);
+    }
+
     function endDrag(e) {
       if (mapState.isDragging) {
         const wasDrag = mapState.dragMoved;
@@ -1003,7 +1146,7 @@
         applyMapTransform();
 
         if (!wasDrag && potentialCountryTarget) {
-          selectMapCountry(potentialCountryTarget, true);
+          handleCountryClick(potentialCountryTarget);
           potentialCountryTarget = null;
         }
       }
@@ -1052,7 +1195,7 @@
     if (!countryEl) return;
     const country = countryEl.dataset.atlasCountry;
     if (country) {
-      selectMapCountry(country, true);
+      handleCountryClick(country);
     }
   });
 
@@ -1064,7 +1207,7 @@
     e.preventDefault();
     const country = countryEl.dataset.atlasCountry;
     if (country) {
-      selectMapCountry(country, true);
+      handleCountryClick(country);
     }
   });
 
@@ -1401,12 +1544,15 @@
   // Overview: 2D Interactive World Map & Research Dataset Catalog
   // ---------------------------------------------------------------------
   const COUNTRY_FOCAL_POINTS = {
+    "United States": { x: 195, y: 145, scale: 2.2 },
     Egypt: { x: 587, y: 167, scale: 2.6 },
-    Brazil: { x: 340, y: 320, scale: 2.2 },
+    Brazil: { x: 335, y: 325, scale: 2.2 },
     Spain: { x: 490, y: 145, scale: 3.2 },
     Poland: { x: 556, y: 110, scale: 3.2 },
     Netherlands: { x: 514, y: 109, scale: 3.8 },
-    China: { x: 800, y: 165, scale: 2.0 },
+    "United Kingdom": { x: 494, y: 104, scale: 3.5 },
+    China: { x: 800, y: 165, scale: 2.2 },
+    "South Korea": { x: 855, y: 150, scale: 3.8 },
     Thailand: { x: 780, y: 215, scale: 3.2 },
     Pakistan: { x: 702, y: 160, scale: 2.8 },
     Iran: { x: 638, y: 152, scale: 2.8 }
@@ -1437,6 +1583,7 @@
       else viewport.classList.remove("is-dragging");
     }
 
+    group.style.transformOrigin = "0px 0px";
     group.setAttribute("transform", `translate(${mapState.panX.toFixed(2)}, ${mapState.panY.toFixed(2)}) scale(${mapState.scale.toFixed(3)})`);
     if (indicator) {
       indicator.textContent = `${Math.round(mapState.scale * 100)}%`;
@@ -1447,11 +1594,14 @@
     if (scale <= 1.0) {
       return { panX: 0, panY: 0 };
     }
-    const minPanX = 1000 - 1000 * scale;
-    const minPanY = 500 - 500 * scale;
+    // Allow panning so any point from (0,0) to (1000,500) can comfortably reach viewport center (500, 250)
+    const minPanX = 500 - 1000 * scale;
+    const maxPanX = 500;
+    const minPanY = 250 - 500 * scale;
+    const maxPanY = 250;
     return {
-      panX: Math.min(0, Math.max(minPanX, panX)),
-      panY: Math.min(0, Math.max(minPanY, panY))
+      panX: Math.min(maxPanX, Math.max(minPanX, panX)),
+      panY: Math.min(maxPanY, Math.max(minPanY, panY))
     };
   }
 
@@ -1474,14 +1624,14 @@
   function zoomToCountry(countryName) {
     const focal = COUNTRY_FOCAL_POINTS[countryName];
     if (!focal) return;
-    const targetScale = focal.scale || 2.5;
-    let targetPanX = 500 - focal.x * targetScale;
-    let targetPanY = 250 - focal.y * targetScale;
-    const clamped = clampPan(targetPanX, targetPanY, targetScale);
+    const targetScale = focal.scale || 2.4;
+    // Precisely center the country's focal coordinates (focal.x, focal.y) at viewport center (500, 250)
+    const targetPanX = 500 - focal.x * targetScale;
+    const targetPanY = 250 - focal.y * targetScale;
 
     mapState.scale = targetScale;
-    mapState.panX = clamped.panX;
-    mapState.panY = clamped.panY;
+    mapState.panX = targetPanX;
+    mapState.panY = targetPanY;
     applyMapTransform();
   }
 
@@ -1499,6 +1649,21 @@
     );
     const finalName = match || countryName;
 
+    // Toggle behavior: If the user clicks the same country again while zoomed in, zoom out to full wide view
+    const isCurrentActive = state.atlasLocation && state.atlasLocation.toLowerCase() === finalName.toLowerCase();
+    const isZoomedIn = mapState.scale > 1.05;
+
+    if (isCurrentActive && isZoomedIn) {
+      // Toggle OFF -> zoom out to worldwide view
+      state.atlasLocation = "all";
+      const searchInput = $("atlasSearch");
+      if (searchInput) searchInput.value = "";
+      resetMapZoom();
+      renderAtlas("all");
+      return;
+    }
+
+    // Toggle ON -> zoom in, center on country, and display its datasets
     state.atlasLocation = finalName;
     const searchInput = $("atlasSearch");
     if (searchInput) {
@@ -1656,7 +1821,7 @@
     // Synchronize active highlights on countries and markers
     document.querySelectorAll(".map-country").forEach(elem => {
       const c = elem.dataset.atlasCountry;
-      const active = isAll || (q
+      const active = !isAll && (q
         ? countries.some(cnt => cnt && cnt.toLowerCase() === c.toLowerCase())
         : (c && c.toLowerCase() === state.atlasLocation.toLowerCase()));
       elem.classList.toggle("active", Boolean(active));
@@ -1665,7 +1830,7 @@
 
     document.querySelectorAll(".map-marker").forEach(elem => {
       const c = elem.dataset.atlasCountry;
-      const active = isAll || (q
+      const active = !isAll && (q
         ? countries.some(cnt => cnt && cnt.toLowerCase() === c.toLowerCase())
         : (c && c.toLowerCase() === state.atlasLocation.toLowerCase()));
       elem.classList.toggle("active", Boolean(active));
