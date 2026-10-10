@@ -227,15 +227,27 @@
                     </g>
                   </svg>
                   <div class="globe-pins" id="globePins">
-                    <button class="globe-pin" type="button" data-atlas-location="Brazil" style="--pin-x:31%;--pin-y:67%" aria-label="Brazil: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Spain" style="--pin-x:49%;--pin-y:40%" aria-label="Spain: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Egypt" style="--pin-x:57%;--pin-y:52%" aria-label="Egypt: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Iran" style="--pin-x:63%;--pin-y:47%" aria-label="Iran: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Pakistan" style="--pin-x:68%;--pin-y:51%" aria-label="Pakistan: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="China" style="--pin-x:77%;--pin-y:43%" aria-label="China: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Netherlands" style="--pin-x:51%;--pin-y:34%" aria-label="Netherlands: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Poland" style="--pin-x:54%;--pin-y:36%" aria-label="Poland: dataset collection sources"></button>
-                    <button class="globe-pin" type="button" data-atlas-location="Thailand" style="--pin-x:74%;--pin-y:59%" aria-label="Thailand: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Brazil" style="--pin-x:31%;--pin-y:67%" aria-label="Brazil: BUS-BRA research collection facility">
+                      <span class="pin-tooltip" aria-hidden="true">Brazil · BUS-BRA</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="Spain" style="--pin-x:49%;--pin-y:40%" aria-label="Spain: UDIAT &amp; BUS-UCLM research collection facilities">
+                      <span class="pin-tooltip" aria-hidden="true">Spain · UDIAT / UCLM</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="Egypt" style="--pin-x:57%;--pin-y:52%" aria-label="Egypt: BUSI research collection facility (Baheya Hospital)">
+                      <span class="pin-tooltip" aria-hidden="true">Egypt · BUSI</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="Poland" style="--pin-x:54%;--pin-y:36%" aria-label="Poland: OASBUD &amp; BrEaST research collection facilities">
+                      <span class="pin-tooltip" aria-hidden="true">Poland · OASBUD / BrEaST</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="China" style="--pin-x:76%;--pin-y:43%" aria-label="China: BUSIS &amp; BUSI_WHU research collection facilities">
+                      <span class="pin-tooltip" aria-hidden="true">China · BUSIS / WHU</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="Pakistan" style="--pin-x:68%;--pin-y:51%" aria-label="Pakistan: BUS_UC research dataset repository">
+                      <span class="pin-tooltip" aria-hidden="true">Pakistan · BUS_UC</span>
+                    </button>
+                    <button class="globe-pin" type="button" data-atlas-location="Iran" style="--pin-x:63%;--pin-y:47%" aria-label="Iran: QAMEBI research collection facility (Urmia)">
+                      <span class="pin-tooltip" aria-hidden="true">Iran · QAMEBI</span>
+                    </button>
                   </div>
                   </div>
                   <div class="globe-orbit orbit-one" aria-hidden="true"></div><div class="globe-orbit orbit-two" aria-hidden="true"></div>
@@ -243,12 +255,15 @@
                 <div class="globe-caption"><span class="pulse-dot" aria-hidden="true"></span><span>Dataset-source locations · select a marker</span><button class="atlas-motion-toggle" id="globeMotionToggle" type="button" aria-pressed="true" aria-controls="atlasGlobe">Pause globe</button></div>
               </div>
               <div class="atlas-results-panel">
-                <label class="atlas-search-label" for="atlasSearch">Find a city, country, or dataset</label>
-                <div class="atlas-search-wrap"><span aria-hidden="true">⌕</span><input id="atlasSearch" type="search" placeholder="Try Cairo, Egypt, BUSI, Brazil…" autocomplete="off"><button id="atlasSearchClear" type="button" aria-label="Clear search" hidden>×</button></div>
+                <label class="atlas-search-label" for="atlasSearch">Find a dataset, city, or country</label>
+                <div class="atlas-search-wrap"><span aria-hidden="true">⌕</span><input id="atlasSearch" type="search" placeholder="Try BUSI, BUS-BRA, UDIAT, OASBUD, BrEaST, China, Poland…" autocomplete="off"><button id="atlasSearchClear" type="button" aria-label="Clear search" hidden>×</button></div>
                 <div class="atlas-summary" id="atlasSummary" aria-live="polite" aria-atomic="true"></div>
                 <div class="atlas-datasets" id="atlasDatasets"></div>
-                <p class="atlas-source-status"><span class="pulse-dot" aria-hidden="true"></span><span id="atlasDataStatus">Curated metadata snapshot</span></p>
-                <p class="atlas-caveat">Counts are reported image samples; entries may overlap and access terms vary. This demo loads a small BUSI example subset; other entries are metadata only. Collection locations describe dataset sources, not individual patients.</p>
+                <div class="atlas-status-bar">
+                  <p class="atlas-source-status"><span class="pulse-dot" id="atlasStatusDot" aria-hidden="true"></span><span id="atlasDataStatus">Curated metadata snapshot</span></p>
+                  <button class="atlas-refresh-btn" id="atlasRefreshBtn" type="button" aria-label="Refresh catalog metadata from source">⟳ Refresh source</button>
+                </div>
+                <p class="atlas-caveat"><strong>Research catalog notes:</strong> Counts are publication-reported or source-reported sample counts; cohorts may overlap and counts are not summed together. Collection locations identify institutional research facilities, not patient residences or patient geographic distribution. EchoAtlas is an educational learning tool and does not provide clinical diagnoses or medical advice.</p>
               </div>
             </div>
           </section>

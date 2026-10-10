@@ -73,17 +73,239 @@
     }
   };
 
-  // Curated public dataset metadata snapshot, not patient-level geography.
-  // Image counts/access terms come from the linked catalog and source pages.
+  // Curated public dataset metadata snapshot; institutional collection sources, not patient residences.
+  // Image counts and access terms come from verified public sources/publications; never summed across datasets.
   let ATLAS_DATASETS = [
-    { country: "Brazil", name: "BUSBRA", images: 1875, access: "Public · CC BY 4.0", href: "https://zenodo.org/records/8231412", source: "Zenodo dataset record" },
-    { country: "China", name: "BUSI_WHU", images: 927, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/k6cpmwybk3/1", source: "Mendeley Data" },
-    { country: "China", name: "US3M", images: 1532, access: "Public · CC BY-NC 4.0", href: "https://www.kaggle.com/datasets/timesxy/multimodal-breast-ultrasound-dataset-us3m", source: "Kaggle dataset page" },
-    { country: "Egypt", location: "Cairo", name: "BUSI", images: 780, access: "Public research dataset", href: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset", source: "Cairo University dataset page", loaded: true },
-    { country: "Iran", name: "QAMEBI", images: 232, access: "Public · access terms at source", href: "https://qamebi.com/breast-ultrasound-images-database", source: "QAMEBI dataset page" },
-    { country: "Pakistan", name: "BUS_UC", images: 811, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/3ksd7w7jkx/1", source: "Mendeley Data" },
-    { country: "Spain", name: "BUS-UCLM", images: 683, access: "Public · CC BY-NC 3.0", href: "https://data.mendeley.com/datasets/7fvgj4jsp7/1", source: "Mendeley Data" },
-    { country: "Spain", name: "UDIAT", images: 163, access: "Access by request", href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php", source: "Dataset access page" }
+    {
+      name: "BUSI",
+      dataset_name: "BUSI (Dataset of Breast Ultrasound Images)",
+      country: "Egypt",
+      collection_country: "Egypt",
+      location: "Cairo",
+      collection_location: "Cairo (Baheya Hospital for Early Detection and Treatment of Women's Cancer)",
+      images: 780,
+      image_count: 780,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "600 female patients aged 25-78; 487 benign, 210 malignant, 133 normal images",
+      access: "Public research dataset",
+      href: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset",
+      source_url: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset",
+      publication_url: "https://doi.org/10.1016/j.dib.2019.104863",
+      citation: "Al-Dhabyani et al. (2020), Data in Brief 28:104863",
+      source: "Cairo University / Data in Brief",
+      provenance_source: "Data in Brief (Al-Dhabyani et al., 2020) & Cairo University repository",
+      loaded: true,
+      pin_x: "57%",
+      pin_y: "52%"
+    },
+    {
+      name: "BUS-BRA",
+      dataset_name: "BUS-BRA (A Breast Ultrasound Dataset for Assessing CAD Systems)",
+      country: "Brazil",
+      collection_country: "Brazil",
+      location: "Rio de Janeiro",
+      collection_location: "Rio de Janeiro (Universidade Federal do Rio de Janeiro & Universidade Estácio de Sá)",
+      images: 1875,
+      image_count: 1875,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "1,064 patients; 1,875 B-mode images (1,268 benign, 607 malignant) with segmentations",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/8231412",
+      source_url: "https://zenodo.org/records/8231412",
+      publication_url: "https://doi.org/10.1002/mp.16812",
+      citation: "Gómez-Flores et al. (2024), Medical Physics 51(3):2326-2337",
+      source: "Zenodo / Medical Physics",
+      provenance_source: "Medical Physics (Gómez-Flores et al., 2024) & Zenodo 8231412",
+      loaded: false,
+      pin_x: "31%",
+      pin_y: "67%"
+    },
+    {
+      name: "UDIAT",
+      dataset_name: "UDIAT (Breast Ultrasound Dataset B)",
+      country: "Spain",
+      collection_country: "Spain",
+      location: "Sabadell",
+      collection_location: "Sabadell (UDIAT-Centre Diagnòstic, Corporació Sanitària Parc Taulí)",
+      images: 163,
+      image_count: 163,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "163 B-mode ultrasound images (110 benign, 53 malignant) collected in Sabadell, Spain",
+      access: "Research access by request",
+      href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      source_url: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      publication_url: "https://doi.org/10.1109/JBHI.2017.2731873",
+      citation: "Yap et al. (2018), IEEE JBHI 22(4):1218-1226",
+      source: "UDIAT / MMU Dataset Page",
+      provenance_source: "IEEE JBHI (Yap et al., 2018) & MMU dataset portal",
+      loaded: false,
+      pin_x: "49%",
+      pin_y: "40%"
+    },
+    {
+      name: "OASBUD",
+      dataset_name: "OASBUD (Open Access Database of Raw Ultrasonic Signals from Breast Lesions)",
+      country: "Poland",
+      collection_country: "Poland",
+      location: "Warsaw",
+      collection_location: "Warsaw (Cancer Center & Institute of Oncology M. Skłodowska-Curie Memorial / IPPT PAN)",
+      images: 100,
+      image_count: 100,
+      count_type: "publication-reported",
+      sample_unit: "lesion cases",
+      cohort_details: "100 breast focal lesions (52 malignant, 48 benign) with raw RF data and reconstructed B-mode",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/545928",
+      source_url: "https://zenodo.org/records/545928",
+      publication_url: "https://doi.org/10.1002/mp.12538",
+      citation: "Piotrzkowska-Wróblewska et al. (2017), Medical Physics 44(11):6100-6109",
+      source: "Zenodo / Medical Physics / IPPT PAN",
+      provenance_source: "Medical Physics (Piotrzkowska-Wróblewska et al., 2017) & Zenodo 545928",
+      loaded: false,
+      pin_x: "54%",
+      pin_y: "35%"
+    },
+    {
+      name: "BrEaST",
+      dataset_name: "BrEaST (Curated Benchmark Dataset for Ultrasound-Based Breast Lesion Analysis)",
+      country: "Poland",
+      collection_country: "Poland",
+      location: "Kraków & Wrocław",
+      collection_location: "Kraków & Wrocław (Maria Sklodowska-Curie Oncology Kraków & Lower Silesian Oncology Center)",
+      images: 256,
+      image_count: 256,
+      count_type: "publication-reported",
+      sample_unit: "scans",
+      cohort_details: "256 patients (256 scans: 154 benign, 98 malignant, 4 normal) across 4 probe types",
+      access: "Public · CC BY 4.0",
+      href: "https://www.cancerimagingarchive.net/collection/breast-lesions-usg/",
+      source_url: "https://www.cancerimagingarchive.net/collection/breast-lesions-usg/",
+      publication_url: "https://doi.org/10.1038/s41597-024-02984-z",
+      citation: "Pawłowska et al. (2024), Nature Scientific Data 11:132",
+      source: "TCIA / Nature Scientific Data",
+      provenance_source: "Nature Scientific Data (Pawłowska et al., 2024) & TCIA Breast-Lesions-USG",
+      loaded: false,
+      pin_x: "53%",
+      pin_y: "37%"
+    },
+    {
+      name: "BUSIS",
+      dataset_name: "BUSIS (Benchmark for Breast Ultrasound Image Segmentation)",
+      country: "China",
+      collection_country: "China",
+      location: "Harbin, Qingdao & Shijiazhuang",
+      collection_location: "Harbin, Qingdao, and Shijiazhuang (2nd Affiliated Hosp. Harbin, Affiliated Hosp. Qingdao, 2nd Hosp. Hebei)",
+      images: 562,
+      image_count: 562,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "562 B-mode breast ultrasound images from women aged 26-78 annotated by 4 radiologists",
+      access: "Public research benchmark",
+      href: "http://cvprip.cs.usu.edu/busbench",
+      source_url: "http://cvprip.cs.usu.edu/busbench",
+      publication_url: "https://doi.org/10.3390/healthcare10040729",
+      citation: "Zhang et al. (2022), Healthcare 10(4):729",
+      source: "Utah State Univ. / MDPI Healthcare",
+      provenance_source: "Healthcare (Zhang et al., 2022) & Utah State Univ. CVPRIP benchmark",
+      loaded: false,
+      pin_x: "76%",
+      pin_y: "43%"
+    },
+    {
+      name: "BUS-UCLM",
+      dataset_name: "BUS-UCLM (Breast Ultrasound Lesion Segmentation Dataset)",
+      country: "Spain",
+      collection_country: "Spain",
+      location: "Ciudad Real",
+      collection_location: "Ciudad Real (Hospital General Universitario de Ciudad Real)",
+      images: 683,
+      image_count: 683,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "683 ultrasound images (419 normal, 174 benign, 90 malignant) with segmentations",
+      access: "Public · CC BY-NC 3.0",
+      href: "https://github.com/noeliavallez/BUS-UCLM-Dataset",
+      source_url: "https://github.com/noeliavallez/BUS-UCLM-Dataset",
+      publication_url: "https://doi.org/10.1038/s41597-025-04562-3",
+      citation: "Vallez et al. (2025), Scientific Data 12:185",
+      source: "Scientific Data / GitHub",
+      provenance_source: "Scientific Data (Vallez et al., 2025) & GitHub repository",
+      loaded: false,
+      pin_x: "48%",
+      pin_y: "42%"
+    },
+    {
+      name: "BUS_UC",
+      dataset_name: "BUS_UC",
+      country: "Pakistan",
+      collection_country: "Pakistan",
+      location: null,
+      collection_location: null,
+      images: 811,
+      image_count: 811,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "811 B-mode images (358 benign, 453 malignant) with lesion masks",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/3ksd7w7jkx/1",
+      source_url: "https://data.mendeley.com/datasets/3ksd7w7jkx/1",
+      publication_url: "https://doi.org/10.1016/j.eswa.2023.121476",
+      citation: "Iqbal et al. (2023), Expert Systems with Applications",
+      source: "Mendeley Data",
+      provenance_source: "Expert Systems with Applications & Mendeley Data",
+      loaded: false,
+      pin_x: "68%",
+      pin_y: "51%"
+    },
+    {
+      name: "BUSI_WHU",
+      dataset_name: "BUSI_WHU (Breast Cancer Ultrasound Image Dataset)",
+      country: "China",
+      collection_country: "China",
+      location: "Wuhan",
+      collection_location: "Wuhan (Wuhan University)",
+      images: 927,
+      image_count: 927,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "927 B-mode breast ultrasound images with lesion segmentation masks",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/k6cpmwybk3/1",
+      source_url: "https://data.mendeley.com/datasets/k6cpmwybk3/1",
+      publication_url: null,
+      citation: "Huang et al. (2023), Mendeley Data, V1",
+      source: "Mendeley Data",
+      provenance_source: "Mendeley Data V1 (Huang et al., 2023)",
+      loaded: false,
+      pin_x: "78%",
+      pin_y: "48%"
+    },
+    {
+      name: "QAMEBI",
+      dataset_name: "QAMEBI (Breast Ultrasound Images Database)",
+      country: "Iran",
+      collection_country: "Iran",
+      location: "Urmia",
+      collection_location: "Urmia (Urmia University of Medical Sciences)",
+      images: 232,
+      image_count: 232,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "232 B-mode ultrasound images (109 benign, 123 malignant) with expert lesion masks",
+      access: "Public research database",
+      href: "https://qamebi.com/breast-ultrasound-images-database",
+      source_url: "https://qamebi.com/breast-ultrasound-images-database",
+      publication_url: "https://doi.org/10.1016/j.compbiomed.2022.106465",
+      citation: "Ardakani et al. (2022), Computers in Biology and Medicine 151:106465",
+      source: "QAMEBI / Computers in Biology and Medicine",
+      provenance_source: "Computers in Biology and Medicine & QAMEBI database",
+      loaded: false,
+      pin_x: "63%",
+      pin_y: "47%"
+    }
   ];
 
   // ---------------------------------------------------------------------
@@ -569,6 +791,13 @@
     }
   }
 
+  const atlasRefreshBtn = $("atlasRefreshBtn");
+  if (atlasRefreshBtn) {
+    atlasRefreshBtn.addEventListener("click", () => {
+      loadAtlasCatalog(true);
+    });
+  }
+
   const orbitAngle = $("caseOrbitAngle");
   function setCaseOrbitAngle(value) {
     state.atlasCaseAngle = Math.max(-35, Math.min(35, Math.round(value)));
@@ -899,51 +1128,139 @@
     const list = $("atlasDatasets");
     if (!summary || !list) return;
     const q = String(query).trim().toLowerCase();
-    const rows = ATLAS_DATASETS.filter(item => q
-      ? `${item.country} ${item.location || ""} ${item.name} ${item.access}`.toLowerCase().includes(q)
-      : item.country === state.atlasLocation);
-    const countries = [...new Set(rows.map(item => item.country))];
-    const imageCount = rows.reduce((total, item) => total + item.images, 0);
+    const rows = ATLAS_DATASETS.filter(item => {
+      if (!q) {
+        const country = (item.collection_country || item.country || "").toLowerCase();
+        return country === state.atlasLocation.toLowerCase();
+      }
+      const searchable = [
+        item.name,
+        item.dataset_name,
+        item.title,
+        item.country,
+        item.collection_country,
+        item.location,
+        item.collection_location,
+        item.access,
+        item.citation,
+        item.provenance_source
+      ].filter(Boolean).join(" ").toLowerCase();
+      return searchable.includes(q);
+    });
+
+    const countries = [...new Set(rows.map(item => item.collection_country || item.country).filter(Boolean))];
     const heading = q
-      ? (countries.length === 1 ? countries[0] : `${countries.length} matching collection locations`)
+      ? (countries.length === 1 ? countries[0] : `${countries.length} matching research regions`)
       : state.atlasLocation;
+
     summary.innerHTML = rows.length
-      ? `<strong>${esc(heading)}</strong><span>${rows.length} dataset ${rows.length === 1 ? "entry" : "entries"} · ${imageCount.toLocaleString()} reported samples</span>`
-      : `<strong>No catalog match</strong><span>Try a listed country or dataset name. No match does not mean no research exists there.</span>`;
+      ? `<strong>${esc(heading)}</strong><span>${rows.length} verified ${rows.length === 1 ? "dataset" : "datasets"} · publication- and source-reported counts listed per dataset (not summed)</span>`
+      : `<strong>No catalog match</strong><span>Try searching BUSI, BUS-BRA, UDIAT, OASBUD, BrEaST, China, Poland, or Spain.</span>`;
 
     list.innerHTML = rows.map(item => {
-      const inAppCount = item.loaded && state.caseSource === "dataset" ? state.cases.length : null;
-      return `<article class="atlas-dataset-card">
-        <div class="atlas-dataset-top"><div><strong>${esc(item.name)}</strong><span>${esc(item.location ? `${item.location}, ${item.country}` : item.country)} · ${item.images.toLocaleString()} ${esc(item.sample_unit || "images")} listed</span></div><a href="${esc(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} source: ${esc(item.source)}">Source ↗</a></div>
-        <div class="atlas-dataset-foot"><span>${esc(item.access)}</span><span class="${inAppCount != null ? "atlas-loaded" : ""}">${inAppCount != null ? `${inAppCount.toLocaleString()} cases loaded here` : "Metadata only · not loaded here"}</span></div>
-        ${item.loaded ? `<button class="btn-link" type="button" data-tab="library">Browse BUSI cases in EchoAtlas →</button>` : ""}
+      const isLoaded = item.loaded && state.caseSource === "dataset";
+      const inAppCount = isLoaded ? state.cases.length : null;
+      const countLabel = item.image_count != null ? item.image_count.toLocaleString() : (item.images != null ? item.images.toLocaleString() : "Unknown");
+      const countType = item.count_type ? `(${esc(item.count_type)})` : "(reported sample count)";
+      const sourceUrl = item.source_url || item.href;
+      const pubUrl = item.publication_url;
+      const locationText = item.collection_location || item.location;
+      const countryText = item.collection_country || item.country;
+
+      return `<article class="atlas-dataset-card" tabindex="0" aria-label="${esc(item.name)} dataset details">
+        <div class="atlas-card-head">
+          <div>
+            <strong>${esc(item.name)}</strong>
+            <span style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-top:2px;">${esc(item.dataset_name || item.title || "")}</span>
+          </div>
+          <span class="atlas-card-badge ${item.loaded ? "loaded" : ""}">${item.loaded ? "Loaded in EchoAtlas" : "Catalog metadata"}</span>
+        </div>
+
+        <div class="atlas-meta-grid">
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Source facility:</span>
+            <span class="atlas-meta-val">${locationText && locationText !== "unknown" ? esc(locationText) : "<em>Unstated in source documentation</em>"}</span>
+          </div>
+          <div class="atlas-meta-note">Institutional research site · not individual patient locations</div>
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Country:</span>
+            <span class="atlas-meta-val">${esc(countryText || "Unknown")}</span>
+          </div>
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Reported samples:</span>
+            <span class="atlas-meta-val"><strong>${countLabel}</strong> ${esc(item.sample_unit || "images")} ${countType}</span>
+          </div>
+          ${item.cohort_details ? `<div class="atlas-meta-note">${esc(item.cohort_details)}</div>` : ""}
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Access &amp; license:</span>
+            <span class="atlas-meta-val">${esc(item.access || "Documented at source")}</span>
+          </div>
+        </div>
+
+        <div class="atlas-links">
+          ${sourceUrl ? `<a href="${esc(sourceUrl)}" class="atlas-link" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} official dataset source (opens in new tab)">Official dataset source ↗</a>` : ""}
+          ${pubUrl ? `<a href="${esc(pubUrl)}" class="atlas-link" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} publication DOI (opens in new tab)">Publication / DOI ↗</a>` : ""}
+        </div>
+
+        ${item.provenance_source ? `<div class="atlas-card-provenance"><span style="color:var(--text-muted)">Verified source:</span> ${esc(item.provenance_source)}</div>` : ""}
+        ${item.loaded ? `<button class="btn-link" type="button" data-tab="library">Browse BUSI example cases in EchoAtlas (${inAppCount != null ? inAppCount : "sample"} loaded) →</button>` : ""}
       </article>`;
     }).join("");
 
     document.querySelectorAll("[data-atlas-location]").forEach(pin => {
-      const active = q ? countries.includes(pin.dataset.atlasLocation) : pin.dataset.atlasLocation === state.atlasLocation;
+      const pinLoc = pin.dataset.atlasLocation;
+      const active = q
+        ? countries.some(c => c && c.toLowerCase() === pinLoc.toLowerCase())
+        : pinLoc.toLowerCase() === state.atlasLocation.toLowerCase();
       pin.classList.toggle("active", active);
       pin.setAttribute("aria-pressed", String(active));
     });
+
     const clear = $("atlasSearchClear");
     if (clear) clear.hidden = !q;
   }
 
-  async function loadAtlasCatalog() {
+  async function loadAtlasCatalog(forceRefresh = false) {
     const status = $("atlasDataStatus");
-    if (status) status.textContent = "Refreshing public GitHub catalog…";
+    const dot = $("atlasStatusDot");
+    const refreshBtn = $("atlasRefreshBtn");
+    if (status) status.textContent = forceRefresh ? "Refreshing source catalog…" : "Checking catalog source…";
+    if (refreshBtn) refreshBtn.disabled = true;
     try {
-      const response = await fetch(`${API_BASE}/api/dataset-atlas`, { headers: { Accept: "application/json" } });
+      const url = forceRefresh ? `${API_BASE}/api/dataset-atlas?refresh=true` : `${API_BASE}/api/dataset-atlas`;
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`Catalog request returned ${response.status}`);
       const payload = await response.json();
       if (!Array.isArray(payload.datasets) || payload.datasets.length === 0) throw new Error("Catalog response had no dataset entries");
       ATLAS_DATASETS = payload.datasets;
-      const fetchedAt = payload.fetched_at ? new Date(payload.fetched_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "just now";
-      if (status) status.textContent = `${payload.stale ? "Cached" : "Live GitHub catalog"} · checked ${fetchedAt}`;
-      renderAtlas(atlasSearch ? atlasSearch.value : "");
+      const timeStr = payload.last_checked_at || payload.fetched_at;
+      const checkedAt = timeStr ? new Date(timeStr).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "just now";
+
+      if (dot) {
+        dot.className = "pulse-dot";
+        if (payload.status === "fallback") dot.classList.add("pulse-error");
+        else if (payload.status === "cached") dot.classList.add("pulse-cached");
+      }
+
+      if (status) {
+        if (payload.status === "live") {
+          status.textContent = `Live public catalog · checked ${checkedAt}`;
+        } else if (payload.status === "cached") {
+          status.textContent = `Cached catalog · checked ${checkedAt}`;
+        } else {
+          status.textContent = `Curated fallback (source unreachable) · checked ${checkedAt}`;
+        }
+      }
+      renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
     } catch (error) {
-      if (status) status.textContent = "Curated snapshot · GitHub refresh unavailable";
-      renderAtlas(atlasSearch ? atlasSearch.value : "");
+      if (dot) dot.className = "pulse-dot pulse-error";
+      if (status) status.textContent = "Curated fallback · source could not be refreshed";
+      renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
+    } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
     }
   }
 

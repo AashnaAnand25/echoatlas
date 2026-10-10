@@ -16,8 +16,10 @@ from fastapi.staticfiles import StaticFiles
 # Support running directly or as module
 try:
     from model import load_model
+    from atlas import get_dataset_atlas_payload
 except ImportError:
     from backend.model import load_model
+    from backend.atlas import get_dataset_atlas_payload
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = Path(os.environ.get(
@@ -30,10 +32,6 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="EchoAtlas - Breast Ultrasound Research API")
-
-ATLAS_README_URL = "https://raw.githubusercontent.com/NKI-MedTech-AI/breast-ultrasound-openhub/main/README.md"
-ATLAS_CACHE_SECONDS = 6 * 60 * 60
-_atlas_cache = {"expires_at": 0, "payload": None}
 
 app.add_middleware(
     CORSMiddleware,
@@ -121,89 +119,17 @@ async def get_cases():
     return {"cases": selected}
 
 
-def _plain_markdown_cell(value: str) -> str:
-    """Reduce a Markdown table cell to display text without executing markup."""
-    value = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", value)
-    return re.sub(r"\s+", " ", value.replace("\u00a0", " ")).strip()
-
-
-def _markdown_cell_url(value: str) -> str | None:
-    markdown_url = re.search(r"\]\((https?://[^)]+)\)", value)
-    if markdown_url:
-        return markdown_url.group(1).strip()
-    plain_url = re.search(r"https?://\S+", value)
-    return plain_url.group(0).rstrip(".,") if plain_url else None
-
-
-def _parse_atlas_readme(markdown: str) -> list[dict]:
-    """Extract breast-ultrasound catalog metadata; never downloads image files."""
-    datasets = []
-    for line in markdown.splitlines():
-        if not line.lstrip().startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        # OpenHub table columns: row, license, country, acronym, name, access,
-        # organ, modality, machine, patients, sample count, format, dimension,
-        # labels, paper, primary data link, alternate link, citation number.
-        if len(cells) < 18 or not cells[0].strip().isdigit():
-            continue
-        country = _plain_markdown_cell(cells[2])
-        acronym = _plain_markdown_cell(cells[3])
-        name = _plain_markdown_cell(cells[4])
-        access = _plain_markdown_cell(cells[5])
-        modality = _plain_markdown_cell(cells[7])
-        sample_text = _plain_markdown_cell(cells[10])
-        # Raw ultrasonic signal records are not image collections for this atlas.
-        if not country or not acronym or not name or "raw" in modality.lower():
-            continue
-        count_match = re.search(r"\d[\d,]*", sample_text)
-        if not count_match:
-            continue
-        samples = int(count_match.group(0).replace(",", ""))
-        href = _markdown_cell_url(cells[15]) or _markdown_cell_url(cells[16]) or _markdown_cell_url(cells[14])
-        if not href:
-            continue
-        license_name = _plain_markdown_cell(cells[1])
-        datasets.append({
-            "country": country,
-            "location": "Cairo" if acronym == "BUSI" and country == "Egypt" else "",
-            "name": acronym,
-            "title": name,
-            "images": samples,
-            "sample_unit": "images/videos" if re.search(r"images?\s*/\s*videos?", sample_text, re.IGNORECASE) else "images",
-            "access": f"{license_name} · {access}" if license_name and license_name.lower() != "unknown" else access,
-            "href": href,
-            "source": "OpenHub GitHub catalog",
-            "loaded": acronym == "BUSI",
-        })
-    return datasets
-
-
 @app.get("/api/dataset-atlas")
-def get_dataset_atlas():
-    """Fetch and cache public dataset metadata from the OpenHub GitHub README."""
-    now = time.time()
-    if _atlas_cache["payload"] and now < _atlas_cache["expires_at"]:
-        return _atlas_cache["payload"]
-    try:
-        request = Request(ATLAS_README_URL, headers={"User-Agent": "EchoAtlas-Educational-Demo/1.0"})
-        with urlopen(request, timeout=5) as response:
-            markdown = response.read(1_000_000).decode("utf-8", errors="replace")
-        datasets = _parse_atlas_readme(markdown)
-        if not datasets:
-            raise ValueError("No dataset rows were found in the public catalog.")
-        payload = {
-            "source": "OpenHub GitHub README",
-            "source_url": ATLAS_README_URL,
-            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "datasets": datasets,
-        }
-        _atlas_cache.update({"expires_at": now + ATLAS_CACHE_SECONDS, "payload": payload})
-        return payload
-    except (OSError, UnicodeError, ValueError, TimeoutError):
-        if _atlas_cache["payload"]:
-            return {**_atlas_cache["payload"], "stale": True}
-        raise HTTPException(status_code=503, detail="Public dataset catalog is temporarily unavailable.")
+def get_dataset_atlas(refresh: bool = False):
+    """Return verified public breast-ultrasound research dataset metadata.
+
+    Includes verified records for BUSI, BUS-BRA, UDIAT, OASBUD, BrEaST, BUSIS,
+    BUS-UCLM, BUS_UC, BUSI_WHU, and QAMEBI. Uses server-side fetching with
+    modest timeouts, in-memory caching, and graceful fallback to verified
+    curated metadata when external sources cannot be reached.
+    """
+    return get_dataset_atlas_payload(force_refresh=refresh)
+
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
