@@ -481,6 +481,7 @@
   const TAB_TITLES = {
     overview: "Overview",
     library: "Case Library",
+    simulator: "Probe Simulator",
     workspace: "Ultrasound Workspace",
     classification: "Classification",
     explainability: "Explainability",
@@ -569,12 +570,53 @@
   }
 
   const orbitAngle = $("caseOrbitAngle");
-  if (orbitAngle) orbitAngle.addEventListener("input", () => {
-    state.atlasCaseAngle = Number(orbitAngle.value);
+  function setCaseOrbitAngle(value) {
+    state.atlasCaseAngle = Math.max(-35, Math.min(35, Math.round(value)));
+    if (orbitAngle) orbitAngle.value = String(state.atlasCaseAngle);
     setText("caseOrbitAngleValue", `${state.atlasCaseAngle}°`);
     const plane = $("caseOrbitPlane");
     if (plane) plane.style.setProperty("--case-yaw", `${state.atlasCaseAngle}deg`);
-  });
+  }
+  if (orbitAngle) orbitAngle.addEventListener("input", () => setCaseOrbitAngle(Number(orbitAngle.value)));
+  const orbitStage = $("caseOrbitStage");
+  if (orbitStage) {
+    let dragStartX = 0;
+    let dragStartAngle = 0;
+    orbitStage.addEventListener("pointerdown", event => {
+      if (event.button !== undefined && event.button !== 0) return;
+      if (event.target.closest("button, input, a")) return;
+      dragStartX = event.clientX;
+      dragStartAngle = state.atlasCaseAngle;
+      orbitStage.classList.add("is-dragging");
+      orbitStage.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    orbitStage.addEventListener("pointermove", event => {
+      if (!orbitStage.classList.contains("is-dragging")) return;
+      setCaseOrbitAngle(dragStartAngle + (event.clientX - dragStartX) * 0.16);
+    });
+    const finishOrbitDrag = () => orbitStage.classList.remove("is-dragging");
+    orbitStage.addEventListener("pointerup", finishOrbitDrag);
+    orbitStage.addEventListener("pointercancel", finishOrbitDrag);
+    orbitStage.addEventListener("lostpointercapture", finishOrbitDrag);
+  }
+  const scanSweepScene = $("scanSweepScene");
+  const scanSweepToggle = $("scanSweepToggle");
+  if (scanSweepScene && scanSweepToggle) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      scanSweepScene.classList.remove("scan-sweep-playing");
+      scanSweepToggle.setAttribute("aria-pressed", "false");
+      scanSweepToggle.textContent = "Animation paused";
+      scanSweepToggle.disabled = true;
+    } else {
+      scanSweepToggle.addEventListener("click", () => {
+        const playing = scanSweepToggle.getAttribute("aria-pressed") === "true";
+        scanSweepToggle.setAttribute("aria-pressed", String(!playing));
+        scanSweepScene.classList.toggle("scan-sweep-playing", !playing);
+        scanSweepToggle.textContent = playing ? "Play animation" : "Pause animation";
+      });
+    }
+  }
   $("orbitPrevCase").addEventListener("click", () => { state.atlasCaseIndex -= 1; renderCaseOrbit(); });
   $("orbitNextCase").addEventListener("click", () => { state.atlasCaseIndex += 1; renderCaseOrbit(); });
 

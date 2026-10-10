@@ -113,6 +113,12 @@
               </button>
             </li>
             <li>
+              <button class="sidebar-item" type="button" data-tab="simulator">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 10l4 5"/><circle cx="12" cy="18" r="1"/><path d="M7 5h10"/></svg>
+                <span>Probe Simulator</span>
+              </button>
+            </li>
+            <li>
               <button class="sidebar-item" type="button" data-tab="workspace">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 18a9 9 0 0 1 18 0"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/><circle cx="12" cy="18" r="1.5"/><path d="M12 3v4"/></svg>
                 <span>Ultrasound Workspace</span>
@@ -253,18 +259,19 @@
               <span class="badge badge-secondary mono" id="orbitCaseLabel">Loading case…</span>
             </div>
             <div class="case-orbit-layout">
-              <div class="case-orbit-stage" id="caseOrbitStage">
+              <div class="case-orbit-stage" id="caseOrbitStage" role="group" aria-label="Interactive 2D scan plane. Drag horizontally to tilt the visual display; use the angle slider for precise control.">
                 <div class="case-orbit-grid" aria-hidden="true"></div>
                 <div class="case-orbit-plane" id="caseOrbitPlane"><img id="caseOrbitImage" alt="Selected breast ultrasound case shown as a 2D scan plane"></div>
                 <div class="orbit-axis axis-x" aria-hidden="true"></div><div class="orbit-axis axis-y" aria-hidden="true"></div>
                 <span class="orbit-stamp mono">2D SOURCE IMAGE</span>
+                <span class="orbit-drag-cue" aria-hidden="true">↔ DRAG TO TILT</span>
               </div>
               <div class="case-orbit-controls">
                 <div class="orbit-case-meta"><span class="metric-label">SELECTED CASE</span><strong id="orbitCaseTitle">Loading available cases…</strong><span id="orbitCaseReference">Dataset reference label shown separately</span></div>
                 <div class="orbit-nav-controls"><button class="btn btn-secondary" id="orbitPrevCase" type="button" aria-label="Previous case">← Previous</button><button class="btn btn-secondary" id="orbitNextCase" type="button" aria-label="Next case">Next →</button></div>
                 <label class="orbit-slider-label" for="caseOrbitAngle"><span>Image-plane angle</span><output id="caseOrbitAngleValue" for="caseOrbitAngle">0°</output></label>
                 <input id="caseOrbitAngle" class="orbit-angle-slider" type="range" min="-35" max="35" value="0" step="1" aria-describedby="orbitAngleHelp">
-                <p id="orbitAngleHelp" class="scan-illustration-note">Use the slider or arrow keys to rotate the display. The original 2D scan data remains unchanged.</p>
+                <p id="orbitAngleHelp" class="scan-illustration-note">Drag the scan left or right, or use the slider and arrow keys. This changes only the 3D display angle; the original 2D scan data remains unchanged.</p>
                 <button class="btn btn-primary btn-block" id="orbitOpenCase" type="button" disabled>Open this case</button>
               </div>
             </div>
@@ -375,6 +382,22 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="tab-view" id="view-simulator" aria-labelledby="title-simulator">
+          <div class="view-header">
+            <div><h1 class="view-title" id="title-simulator" tabindex="-1">How an ultrasound image is made</h1><p class="view-subtitle">A conceptual animation of a probe sweep, returning echoes, and a 2D image slice.</p></div>
+          </div>
+          <section class="card simulator-card" aria-labelledby="simulatorTitle">
+            <div class="card-header simulator-header"><div><p class="eyebrow mono">CONCEPTUAL 3D EXPLAINER</p><h2 class="card-title" id="simulatorTitle">From probe movement to ultrasound image</h2><p class="card-desc">The motion below is an educational illustration. It is not a reconstruction of a BUSI scan or a 3D patient volume.</p></div><button class="btn btn-secondary" id="scanSweepToggle" type="button" aria-pressed="true" aria-controls="scanSweepScene">Pause animation</button></div>
+            <div class="simulator-layout">
+              <div class="sim-scene scan-sweep-playing" id="scanSweepScene" role="img" aria-label="Illustration of an ultrasound probe sweeping above tissue, sending echo waves toward a highlighted region and producing a 2D slice">
+                <div class="sim-grid" aria-hidden="true"></div><span class="sim-label sim-label-probe">PROBE</span><div class="sim-probe" aria-hidden="true"><span></span></div><div class="sim-beam" aria-hidden="true"></div>
+                <div class="sim-tissue" aria-hidden="true"><i></i><i></i><i></i><b></b></div><div class="sim-slice" aria-hidden="true"><span>2D SLICE</span></div><span class="sim-label sim-label-tissue">TISSUE</span>
+              </div>
+              <div class="simulator-copy"><ol><li><strong>Move the probe</strong><span>The probe sends short sound pulses into tissue.</span></li><li><strong>Listen for echoes</strong><span>Different boundaries reflect sound back at different times.</span></li><li><strong>Build a 2D view</strong><span>The scanner maps echo timing and strength into image pixels.</span></li></ol><p class="simulator-caveat">Conceptual animation only. BUSI contains 2D images and does not provide a 3D sweep volume.</p><button class="btn btn-primary" type="button" data-tab="library">Explore a BUSI case →</button></div>
+            </div>
+          </section>
         </section>
 
 
