@@ -62,20 +62,13 @@ python3 -m uvicorn backend.main:app --reload --port 8010
 
 Open `http://127.0.0.1:8010`. If port 8010 is already in use, the app may already be running; open that URL, or choose another port such as `8011` and use that port in the browser URL.
 
-## AI Learning Guide and C3
+## AI Learning Guide with Gemini
 
-The AI Learning Guide UI is available in the sidebar. Its backend proxy keeps credentials out of browser code and only sends conversation messages (and one explicitly attached image, if any) when the learner presses **Send**. Chat memory is held in the browser session and is cleared on refresh or with **Clear chat**. An image requires an explicit confirmation that it is a public or fully de-identified teaching image with no patient identifiers. Use image discussion for general education only; do not use it for diagnosis or case classification.
+The AI Learning Guide UI is available in the sidebar. FastAPI calls Google's Gemini `generateContent` API, keeping the API key on the server and out of browser code. Conversation memory is held in the browser session and cleared on refresh or with **Clear chat**. An attached image is sent only after the learner confirms it is public or fully de-identified and contains no patient identifiers. Use image discussion for general education only; do not use it for diagnosis or case classification.
 
-The proxy is a scaffold for a **C3-hosted, OpenAI Chat Completions-compatible endpoint** that serves Claude. A C3 workspace URL alone is not an inference endpoint, and C3 MIS, Agentix, or GenAI routes can have different request/auth/response formats. Do not configure this proxy until the C3 app exposes a compatible route or its API contract is adapted. The chat reports “not configured” until both server-side URL and credential are set.
+Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/app/apikey). Copy `.env.example` to `.env` and put the key in `GEMINI_API_KEY`; keep `.env` local (it is ignored by Git). The default model is `gemini-3.8-flash`; override it with `GEMINI_MODEL` if needed. Install requirements after pulling changes so `python-dotenv` is available, then restart FastAPI. Never put the key in frontend code, Git, a screenshot, or a chat message. This local demo has no authentication or per-user quotas, so do not expose its server publicly with your personal key. Google model access, quota, and pricing depend on the account and model; check the current Gemini API terms and limits before use.
 
-Expected server environment variables:
-
-- `ECHOATLAS_C3_CHAT_URL` — HTTPS endpoint for the compatible chat route (local HTTP is allowed for local development).
-- `ECHOATLAS_C3_CHAT_TOKEN` — private server-side credential; never place this in frontend code, Git, or chat messages.
-- `ECHOATLAS_C3_CHAT_MODEL` — model identifier required by that route.
-- Optional: `ECHOATLAS_C3_CHAT_LABEL`, `ECHOATLAS_C3_AUTH_HEADER`, `ECHOATLAS_C3_AUTH_SCHEME`.
-
-The current proxy sends `model`, `messages`, `temperature`, and `max_tokens` and expects `choices[0].message.content` in the response. Confirm the C3 endpoint's request and response contract before setting these values; adapt the server proxy if its contract differs. Never use a browser-side API key.
+Google's current REST format sends chat history in `contents`, a fixed educational boundary in `system_instruction`, and the key in the server-side `x-goog-api-key` header. The default model can change as Google updates availability; see its [current model list](https://ai.google.dev/gemini-api/docs/models).
 
 ## License
 

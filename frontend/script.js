@@ -51,7 +51,7 @@
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
-    chat: { configured: false, modelLabel: "Claude via C3", messages: [], attachment: null, imageConsent: false, sending: false, error: "" },
+    chat: { configured: false, modelLabel: "Gemini Learning Guide", messages: [], attachment: null, imageConsent: false, sending: false, error: "" },
     atlasLocation: "Egypt",
     model: {
       online: false,
@@ -542,7 +542,7 @@
   }, true);
 
   // ---------------------------------------------------------------------
-  // AI Learning Guide (server-side C3 proxy; no credentials in the browser)
+  // AI Learning Guide (server-side Gemini proxy; no credentials in the browser)
   // ---------------------------------------------------------------------
   function renderChat() {
     const messagesEl = $("chatMessages");
@@ -605,18 +605,18 @@
       if (!response.ok) throw new Error("status unavailable");
       const data = await response.json();
       state.chat.configured = Boolean(data.configured);
-      state.chat.modelLabel = data.model_label || "Claude via C3";
-      setText("chatModelStatus", state.chat.configured ? "Connected through the EchoAtlas server" : "C3 route not configured yet");
+      state.chat.modelLabel = data.model_label || "Gemini Learning Guide";
+      setText("chatModelStatus", state.chat.configured ? "Connected through the EchoAtlas server" : "Gemini API key not configured yet");
       const notice = $("chatConnectionNotice");
       notice.textContent = state.chat.configured
-        ? "Connected. Messages and any attached image are sent to the configured C3 route when you press Send."
-        : "Not connected yet. The chat screen is ready, but your local server still needs a C3 Claude chat endpoint and private credential.";
+        ? "Connected. Messages and any attached image are sent to Google Gemini when you press Send."
+        : "Not connected yet. Add a Gemini API key to the EchoAtlas server environment, then restart the server.";
       notice.classList.toggle("is-connected", state.chat.configured);
     } catch (error) {
       state.chat.configured = false;
       setText("chatModelStatus", "EchoAtlas server not reachable");
       const notice = $("chatConnectionNotice");
-      if (notice) notice.textContent = "Start or reconnect the EchoAtlas server to check the C3 chat connection.";
+      if (notice) notice.textContent = "Start or reconnect the EchoAtlas server to check the Gemini connection.";
     }
     renderChat();
   }
@@ -648,7 +648,7 @@
     const text = input.value.trim();
     const attachment = state.chat.attachment;
     if (attachment && !state.chat.imageConsent) {
-      state.chat.error = "Confirm the image is public or fully de-identified before sending it to C3.";
+      state.chat.error = "Confirm the image is public or fully de-identified before sending it to Gemini.";
       renderChat();
       $("chatImageConsent").focus();
       return;
@@ -676,12 +676,12 @@
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages })
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || "The C3 chat request failed. Please try again.");
+      if (!response.ok) throw new Error(data.detail || "The Gemini chat request failed. Please try again.");
       state.chat.modelLabel = data.model || state.chat.modelLabel;
       state.chat.messages.push({ role: "assistant", text: String(data.answer || "") });
       state.chat.messages = state.chat.messages.slice(-12);
     } catch (error) {
-      state.chat.error = error.message || "Could not reach the C3 chat service.";
+      state.chat.error = error.message || "Could not reach the Gemini chat service.";
     } finally {
       state.chat.sending = false;
       renderChat();

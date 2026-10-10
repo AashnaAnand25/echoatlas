@@ -424,8 +424,8 @@
           </div>
           <div class="chat-layout">
             <section class="card chat-main-card" aria-label="AI educational chat">
-              <div class="chat-topbar"><div class="chat-model-chip"><span class="chat-spark" aria-hidden="true">✦</span><div><strong>Claude via C3</strong><span id="chatModelStatus">Checking connection…</span></div></div><button class="btn btn-secondary-sm" id="chatClearBtn" type="button">Clear chat</button></div>
-              <div class="chat-connection-notice" id="chatConnectionNotice" role="status" aria-live="polite">Checking whether the server has a C3 Claude route configured…</div>
+              <div class="chat-topbar"><div class="chat-model-chip"><span class="chat-spark" aria-hidden="true">✦</span><div><strong>Gemini Learning Guide</strong><span id="chatModelStatus">Checking connection…</span></div></div><button class="btn btn-secondary-sm" id="chatClearBtn" type="button">Clear chat</button></div>
+              <div class="chat-connection-notice" id="chatConnectionNotice" role="status" aria-live="polite">Checking whether a Gemini API key is configured on the EchoAtlas server…</div>
               <div class="chat-suggestions" id="chatSuggestions" aria-label="Suggested questions">
                 <button type="button" class="chat-suggestion">What does a BUSI dataset label mean?</button>
                 <button type="button" class="chat-suggestion">How does a segmentation mask work?</button>
@@ -435,8 +435,8 @@
                 <div class="chat-welcome" id="chatWelcome"><div class="chat-welcome-mark" aria-hidden="true">✦</div><h2>Curious about an ultrasound concept?</h2><p>Ask a general learning question, or attach one image you’re permitted to share and ask about its visible features. The guide cannot diagnose or classify an image.</p></div>
               </div>
               <div class="chat-error" id="chatError" role="alert" hidden></div>
-              <div class="chat-attachment" id="chatAttachment" hidden><img id="chatAttachmentPreview" alt="Image attached to your next chat message"><div><strong id="chatAttachmentName">Attached image</strong><span>Sent to the configured C3 Claude route only when you press Send.</span></div><button class="btn-icon" id="chatRemoveAttachmentBtn" type="button" aria-label="Remove attached image">×</button></div>
-              <label class="chat-image-consent" id="chatImageConsentWrap" for="chatImageConsent" hidden><input id="chatImageConsent" type="checkbox"><span>I confirm this is a public or fully de-identified teaching image, contains no patient identifiers, and I want to send it to C3 for general educational discussion. No diagnosis.</span></label>
+              <div class="chat-attachment" id="chatAttachment" hidden><img id="chatAttachmentPreview" alt="Image attached to your next chat message"><div><strong id="chatAttachmentName">Attached image</strong><span>Sent to Google Gemini only when you press Send.</span></div><button class="btn-icon" id="chatRemoveAttachmentBtn" type="button" aria-label="Remove attached image">×</button></div>
+              <label class="chat-image-consent" id="chatImageConsentWrap" for="chatImageConsent" hidden><input id="chatImageConsent" type="checkbox"><span>I confirm this is a public or fully de-identified teaching image, contains no patient identifiers, and I want to send it to Google Gemini for general educational discussion. No diagnosis.</span></label>
               <form class="chat-composer" id="chatForm">
                 <textarea id="chatInput" rows="2" maxlength="2000" placeholder="Ask a learning question…" aria-label="Your message" disabled></textarea>
                 <div class="chat-composer-actions"><div class="chat-attach-actions"><button class="btn btn-secondary-sm" id="chatUploadBtn" type="button" disabled>＋ Add image</button><button class="btn btn-secondary-sm" id="chatCurrentCaseBtn" type="button" disabled>Attach open case</button><input id="chatFileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden><span class="chat-privacy-hint">Use public or de-identified images only.</span></div><button class="btn btn-primary" id="chatSendBtn" type="submit" disabled>Send <span aria-hidden="true">↑</span></button></div>
@@ -445,8 +445,8 @@
             <aside class="card chat-side-card">
               <p class="eyebrow mono">A SAFE STUDY PARTNER</p><h2 class="card-title">What it can help with</h2>
               <ul class="chat-help-list"><li>Explain ultrasound terms and how B-mode images are formed.</li><li>Describe the difference between a dataset annotation and a model mask.</li><li>Put EchoAtlas’ exploratory metrics into plain language.</li><li>Discuss general visual concepts in an attached image without making a diagnosis.</li></ul>
-              <div class="chat-boundary"><strong>Educational only</strong><p>Claude can make mistakes. It cannot determine whether an image is cancer, provide medical advice, or replace a clinician.</p></div>
-              <p class="chat-memory-note"><strong>Conversation memory:</strong> recent messages and an attached image are kept in this browser session and sent to C3 with each follow-up. Clearing the chat or refreshing removes them.</p>
+              <div class="chat-boundary"><strong>Educational only</strong><p>Gemini can make mistakes. It cannot determine whether an image is cancer, provide medical advice, or replace a clinician.</p></div>
+              <p class="chat-memory-note"><strong>Conversation memory:</strong> recent messages and an attached image are kept in this browser session and sent to Google Gemini with each follow-up. Clearing the chat or refreshing removes them.</p>
             </aside>
           </div>
         </section>
@@ -1232,7 +1232,7 @@
                 <li>Counts are reported samples per catalog entry, not a de-duplicated global case total. Entries may overlap.</li>
                 <li>Map markers indicate the collection/source country as cataloged, not the residence or location of individual patients.</li>
                 <li>This demo loads a small BUSI example subset. Other entries link to their source and may require separate access or have non-commercial terms.</li>
-                <li>No C3 AI tenant or API connection is configured. The live refresh reads the public GitHub README; no credentials are stored in this public repository.</li>
+                <li>The public dataset catalog refresh reads the GitHub README. Gemini chat credentials are configured locally on the EchoAtlas server and are not stored in this public repository.</li>
               </ul>
             </div>
 

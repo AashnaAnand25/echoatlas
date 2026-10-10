@@ -6,10 +6,11 @@ import re
 import shutil
 import time
 import uuid
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import torch
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +22,7 @@ except ImportError:
     from backend.model import load_model
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 MODEL_PATH = Path(os.environ.get(
     "ECHOATLAS_MODEL_PATH", BASE_DIR / "models" / "EchoAtlas_baseline.pt"
 )).expanduser().resolve()
@@ -40,18 +42,14 @@ ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly e
 
 
 def _chat_configured() -> bool:
-    """This proxy expects a C3-hosted, OpenAI-compatible chat route."""
-    endpoint = os.environ.get("ECHOATLAS_C3_CHAT_URL", "").strip()
-    token = os.environ.get("ECHOATLAS_C3_CHAT_TOKEN", "").strip()
-    parsed = urlparse(endpoint)
-    safe_scheme = parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost"})
-    return bool(endpoint and token and parsed.hostname and safe_scheme)
+    """Gemini credentials stay in the server process, never in browser code."""
+    return bool(os.environ.get("GEMINI_API_KEY", "").strip())
 
 
 def _sanitize_chat_messages(messages):
     if not isinstance(messages, list) or not 1 <= len(messages) <= 12:
         raise HTTPException(status_code=422, detail="Send between 1 and 12 recent chat messages.")
-    cleaned = [{"role": "system", "content": ECHOATLAS_CHAT_SYSTEM_PROMPT}]
+    cleaned = []
     total_chars = 0
     for message in messages:
         if not isinstance(message, dict) or message.get("role") not in {"user", "assistant"}:
@@ -257,57 +255,76 @@ def get_dataset_atlas():
 async def get_assistant_status():
     return {
         "configured": _chat_configured(),
-        "provider": "C3",
-        "model_label": os.environ.get("ECHOATLAS_C3_CHAT_LABEL", "Claude via C3"),
+        "provider": "Google Gemini",
+        "model_label": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
     }
 
 
 @app.post("/api/assistant/chat")
 async def assistant_chat(request: FastAPIRequest):
-    """Server-side proxy; credentials and provider errors never reach frontend JS."""
+    """Server-side Gemini proxy; the API key never reaches frontend JS."""
     if not _chat_configured():
         raise HTTPException(
             status_code=503,
-            detail="Claude through C3 is not connected yet. Configure the server-side C3 chat endpoint and credential.",
+            detail="Gemini is not connected yet. Set GEMINI_API_KEY in the server environment, then restart EchoAtlas.",
         )
     try:
         payload = await request.json()
     except Exception as exc:
         raise HTTPException(status_code=400, detail="The chat request must be valid JSON.") from exc
     messages = _sanitize_chat_messages(payload.get("messages") if isinstance(payload, dict) else None)
-    endpoint = os.environ["ECHOATLAS_C3_CHAT_URL"].strip()
-    token = os.environ["ECHOATLAS_C3_CHAT_TOKEN"].strip()
-    auth_header = os.environ.get("ECHOATLAS_C3_AUTH_HEADER", "Authorization").strip()
-    auth_scheme = os.environ.get("ECHOATLAS_C3_AUTH_SCHEME", "Bearer").strip()
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", model_name):
+        raise HTTPException(status_code=500, detail="The configured Gemini model name is invalid.")
+    contents = []
+    for message in messages:
+        parts = []
+        content = message["content"]
+        if isinstance(content, str):
+            parts.append({"text": content})
+        else:
+            for part in content:
+                if part["type"] == "text":
+                    parts.append({"text": part["text"]})
+                elif part["type"] == "image_url":
+                    data_url = part["image_url"]["url"]
+                    header, encoded = data_url.split(",", 1)
+                    mime_type = header[5:].split(";", 1)[0]
+                    parts.append({"inline_data": {"mime_type": mime_type, "data": encoded}})
+        contents.append({"role": "model" if message["role"] == "assistant" else "user", "parts": parts})
     request_body = json.dumps({
-        "model": os.environ.get("ECHOATLAS_C3_CHAT_MODEL", "claude-via-c3"),
-        "messages": messages,
-        "temperature": 0.2,
-        "max_tokens": 700,
+        "system_instruction": {"parts": [{"text": ECHOATLAS_CHAT_SYSTEM_PROMPT}]},
+        "contents": contents,
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 700},
     }).encode("utf-8")
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
-    headers[auth_header] = f"{auth_scheme} {token}" if auth_scheme else token
-    upstream = Request(endpoint, data=request_body, headers=headers, method="POST")
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{quote(model_name, safe='')}:generateContent"
+    upstream = Request(endpoint, data=request_body, headers={
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-goog-api-key": os.environ["GEMINI_API_KEY"].strip(),
+    }, method="POST")
     try:
         with urlopen(upstream, timeout=45) as response:
             result = json.loads(response.read(2_000_001).decode("utf-8"))
     except HTTPError as exc:
         if exc.code in (401, 403):
-            raise HTTPException(status_code=502, detail="C3 rejected the configured credential or access scope.") from exc
+            raise HTTPException(status_code=502, detail="Google rejected the Gemini API key or its access scope.") from exc
         if exc.code == 429:
-            raise HTTPException(status_code=503, detail="The C3 Claude route is busy. Please try again shortly.") from exc
-        raise HTTPException(status_code=502, detail=f"C3 chat request failed with HTTP {exc.code}.") from exc
+            raise HTTPException(status_code=503, detail="Gemini is busy or this key reached its quota. Please try again shortly.") from exc
+        raise HTTPException(status_code=502, detail=f"Gemini chat request failed with HTTP {exc.code}.") from exc
     except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=502, detail="Could not reach the configured C3 chat route.") from exc
+        raise HTTPException(status_code=502, detail="Could not reach the Gemini API.") from exc
     try:
-        answer = result["choices"][0]["message"]["content"]
-        if isinstance(answer, list):
-            answer = "\n".join(part.get("text", "") for part in answer if isinstance(part, dict))
+        answer = "\n".join(
+            part.get("text", "")
+            for part in result["candidates"][0]["content"]["parts"]
+            if isinstance(part, dict) and isinstance(part.get("text"), str)
+        )
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError("empty completion")
     except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="C3 returned an unexpected chat response format.") from exc
-    return {"answer": answer.strip()[:12000], "model": os.environ.get("ECHOATLAS_C3_CHAT_LABEL", "Claude via C3")}
+        raise HTTPException(status_code=502, detail="Gemini returned an unexpected or empty chat response.") from exc
+    return {"answer": answer.strip()[:12000], "model": model_name}
 
 
 @app.post("/predict")
