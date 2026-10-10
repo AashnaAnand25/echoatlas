@@ -48,7 +48,7 @@
     historyCounter: 0,
     reportEntryId: null,
     practice: { cases: [], index: 0, matches: 0, answered: false },
-    guidedTour: { active: false, step: 0, busy: false },
+    guidedTour: { active: false, step: 0, busy: false, targetEl: null, scrolledToStep: -1 },
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
@@ -550,7 +550,11 @@
     const panel = $("guidedTourPanel");
     if (!panel) return;
     panel.hidden = !tour.active;
-    if (!tour.active) return;
+    if (!tour.active) {
+      if (tour.targetEl) tour.targetEl.classList.remove("guided-tour-target");
+      tour.targetEl = null;
+      return;
+    }
 
     const step = GUIDED_TOUR_STEPS[tour.step];
     const caseData = state.currentCase;
@@ -579,8 +583,24 @@
       if (!caseData || !caseData.annotationUrl) description.textContent = "This case has no dataset annotation. Some cases do; custom uploads do not.";
     } else if (tour.step === 3) {
       action.textContent = caseData && caseData.analysis ? "Review model output" : state.model.online ? "Run experimental model" : "Continue without model";
+      if (!caseData?.analysis && !state.model.online) description.textContent = "The model is offline right now. Continue to review the dataset label; no AI output will be shown.";
     } else if (tour.step === 4) {
       action.textContent = currentTab === "classification" ? "Finish walkthrough" : "Compare labels";
+      if (!caseData?.analysis) description.textContent = "Review the dataset reference. The model output will clearly say if it is unavailable.";
+    }
+
+    const targetSelectors = ["#libraryGrid .sample-scan-btn", "#mriViewport", "#toggleAnnotationBtn", state.model.online ? "#runModelBtn" : ".workspace-right-panel", ".model-lab-grid"];
+    const target = isExpectedTab ? document.querySelector(targetSelectors[tour.step]) : null;
+    if (tour.targetEl !== target) {
+      if (tour.targetEl) tour.targetEl.classList.remove("guided-tour-target");
+      tour.targetEl = target;
+      tour.scrolledToStep = -1;
+      if (target) target.classList.add("guided-tour-target");
+    }
+    if (target && tour.scrolledToStep !== tour.step) {
+      tour.scrolledToStep = tour.step;
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      window.setTimeout(() => target.scrollIntoView({ behavior, block: "center" }), 80);
     }
   }
 
@@ -627,6 +647,7 @@
     }
     tour.active = false;
     renderGuidedTour();
+    showToast("Walkthrough complete. Explore another case whenever you’re ready.", "success");
   }
 
   function retreatGuidedTour() {
@@ -637,7 +658,8 @@
   }
 
   $("startGuidedTourBtn").addEventListener("click", () => {
-    state.guidedTour = { active: true, step: 0, busy: false };
+    if (state.guidedTour.targetEl) state.guidedTour.targetEl.classList.remove("guided-tour-target");
+    state.guidedTour = { active: true, step: 0, busy: false, targetEl: null, scrolledToStep: -1 };
     switchTab("library");
   });
   $("guidedTourActionBtn").addEventListener("click", advanceGuidedTour);
@@ -1992,6 +2014,10 @@
     if (state.viewer.showAnnotation) c.progress.annotation = true;
     applyViewerTransforms();
     renderJourney();
+    if (state.guidedTour.active && state.guidedTour.step === 2 && state.viewer.showAnnotation) {
+      state.guidedTour.step = 3;
+      renderGuidedTour();
+    }
   }
 
   function toggleModel() {
@@ -2073,6 +2099,10 @@
       return;
     }
 
+    if (state.guidedTour.active && state.guidedTour.step === 3) {
+      state.guidedTour.busy = true;
+      renderGuidedTour();
+    }
     showLoading(true);
     const t0 = performance.now();
     const timer = setInterval(() => setText("loadingTimeCounter", `${Math.round(performance.now() - t0)} ms`), 50);
