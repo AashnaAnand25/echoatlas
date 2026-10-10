@@ -51,7 +51,7 @@
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
-    chat: { configured: false, modelLabel: "Claude via C3", messages: [], attachment: null, sending: false, error: "" },
+    chat: { configured: false, modelLabel: "Claude via C3", messages: [], attachment: null, imageConsent: false, sending: false, error: "" },
     atlasLocation: "Egypt",
     model: {
       online: false,
@@ -583,6 +583,8 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
     const attachment = state.chat.attachment;
     $("chatAttachment").hidden = !attachment;
+    $("chatImageConsentWrap").hidden = !attachment;
+    $("chatImageConsent").checked = Boolean(state.chat.imageConsent && attachment);
     if (attachment) {
       $("chatAttachmentPreview").src = attachment.dataUrl;
       setText("chatAttachmentName", attachment.name);
@@ -592,7 +594,7 @@
     const enabled = state.chat.configured && !state.chat.sending;
     const imageAlreadyInChat = state.chat.messages.some(message => Boolean(message.imageDataUrl));
     $("chatInput").disabled = !enabled;
-    $("chatSendBtn").disabled = !enabled;
+    $("chatSendBtn").disabled = !enabled || Boolean(attachment && !state.chat.imageConsent);
     $("chatUploadBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat;
     $("chatCurrentCaseBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat || !state.currentCase;
   }
@@ -645,12 +647,19 @@
     const input = $("chatInput");
     const text = input.value.trim();
     const attachment = state.chat.attachment;
+    if (attachment && !state.chat.imageConsent) {
+      state.chat.error = "Confirm the image is public or fully de-identified before sending it to C3.";
+      renderChat();
+      $("chatImageConsent").focus();
+      return;
+    }
     if (!text && !attachment) { input.focus(); return; }
     const userMessage = { role: "user", text: chatContextText(text || "Please explain general visible ultrasound features in this image without diagnosing it.", attachment && attachment.case) };
     if (attachment) { userMessage.imageDataUrl = attachment.dataUrl; userMessage.imageName = attachment.name; }
     state.chat.messages.push(userMessage);
     state.chat.messages = state.chat.messages.slice(-12);
     state.chat.attachment = null;
+    state.chat.imageConsent = false;
     state.chat.error = "";
     input.value = "";
     state.chat.sending = true;
@@ -691,6 +700,7 @@
     if (!file) return;
     try {
       state.chat.attachment = { name: file.name, dataUrl: await chatImageDataUrl(file), case: null };
+      state.chat.imageConsent = false;
       state.chat.error = "";
     } catch (error) { state.chat.error = error.message; }
     renderChat();
@@ -709,14 +719,21 @@
       }
       if (dataUrl.length > 5_600_000) throw new Error("This case image is over the 4 MB chat limit.");
       state.chat.attachment = { name: c.filename || c.id, dataUrl, case: c };
+      state.chat.imageConsent = false;
       state.chat.error = "";
     } catch (error) { state.chat.error = error.message; }
     renderChat();
   });
-  $("chatRemoveAttachmentBtn").addEventListener("click", () => { state.chat.attachment = null; renderChat(); });
+  $("chatImageConsent").addEventListener("change", event => {
+    state.chat.imageConsent = event.target.checked;
+    state.chat.error = "";
+    renderChat();
+  });
+  $("chatRemoveAttachmentBtn").addEventListener("click", () => { state.chat.attachment = null; state.chat.imageConsent = false; renderChat(); });
   $("chatClearBtn").addEventListener("click", () => {
     state.chat.messages = [];
     state.chat.attachment = null;
+    state.chat.imageConsent = false;
     state.chat.error = "";
     renderChat();
     $("chatInput").focus();

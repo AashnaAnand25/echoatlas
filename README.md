@@ -64,7 +64,7 @@ Open `http://127.0.0.1:8010`. If port 8010 is already in use, the app may alread
 
 ## AI Learning Guide and C3
 
-The AI Learning Guide UI is available in the sidebar. Its backend proxy keeps credentials out of browser code and only sends conversation messages (and one explicitly attached image, if any) when the learner presses **Send**. Chat memory is held in the browser session and is cleared on refresh or with **Clear chat**. Use public or de-identified images only.
+The AI Learning Guide UI is available in the sidebar. Its backend proxy keeps credentials out of browser code and only sends conversation messages (and one explicitly attached image, if any) when the learner presses **Send**. Chat memory is held in the browser session and is cleared on refresh or with **Clear chat**. An image requires an explicit confirmation that it is a public or fully de-identified teaching image with no patient identifiers. Use image discussion for general education only; do not use it for diagnosis or case classification.
 
 The proxy is a scaffold for a **C3-hosted, OpenAI Chat Completions-compatible endpoint** that serves Claude. A C3 workspace URL alone is not an inference endpoint, and C3 MIS, Agentix, or GenAI routes can have different request/auth/response formats. Do not configure this proxy until the C3 app exposes a compatible route or its API contract is adapted. The chat reports “not configured” until both server-side URL and credential are set.
 

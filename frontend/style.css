@@ -3257,6 +3257,8 @@ button:disabled, [aria-disabled="true"] {
 .chat-attachment div { min-width:0; flex:1; }
 .chat-attachment strong, .chat-attachment span { display:block; overflow-wrap:anywhere; }
 .chat-attachment span, .chat-privacy-hint { color:var(--text-secondary); font-size:.78rem; }
+.chat-image-consent { display:flex; align-items:flex-start; gap:.65rem; margin:0 1.25rem .8rem; padding:.75rem .85rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-secondary); font-size:.85rem; line-height:1.5; }
+.chat-image-consent input { flex:0 0 auto; width:1.1rem; height:1.1rem; margin:.1rem 0 0; accent-color:var(--accent-cyan); }
 .chat-composer { margin:0 1.25rem 1.25rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); }
 .chat-composer textarea { display:block; width:100%; resize:vertical; min-height:4rem; padding:.9rem 1rem; border:0; border-radius:var(--radius-sm); color:var(--text-primary); background:transparent; font:inherit; }
 .chat-composer-actions { display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:.6rem .7rem; border-top:1px solid var(--border-color); }
