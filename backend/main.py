@@ -38,7 +38,7 @@ ATLAS_README_URL = "https://raw.githubusercontent.com/NKI-MedTech-AI/breast-ultr
 ATLAS_CACHE_SECONDS = 6 * 60 * 60
 _atlas_cache = {"expires_at": 0, "payload": None}
 
-ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly educational tutor for breast-ultrasound concepts and public research datasets. This application is not for diagnosis or clinical decision-making. Never determine whether an image is benign, malignant, cancer, or a diagnosis; do not provide treatment recommendations. If asked to interpret a scan, explain that you can discuss general visual concepts but cannot diagnose or classify an individual image. Clearly separate BUSI dataset reference labels from experimental model outputs and never treat either as clinical truth. Explain uncertainty and limitations in plain language, ask clarifying questions when useful, and keep replies concise and supportive. EchoAtlas' exploratory seed-42 runs are small U-Net experiments, not clinical evidence and not the paper's MaskFormer: the MPS held-out test results were accuracy 0.692, balanced accuracy 0.686, macro-F1 0.671, macro-mAP 0.817, mean Dice 0.629, mean IoU 0.548; the same-split SNU RTX 4090 run was accuracy 0.667, balanced accuracy 0.617, macro-F1 0.621, macro-mAP 0.805, mean Dice 0.504, mean IoU 0.398. Both used a duplicate-grouped image-level split, not patient-level validation, and each is a single exploratory run. Do not call macro-mAP accuracy or claim clinical utility. For urgent health concerns, recommend speaking with a qualified healthcare professional."""
+ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly tutor for breast-ultrasound concepts and public research datasets. This is educational only, not for diagnosis or clinical decisions. Never classify or diagnose a specific scan, recommend treatment, or imply that a dataset label or experimental model output is clinical truth. If asked to interpret an individual scan, kindly say you cannot diagnose it and offer to explain general concepts instead. Answer in plain language, usually 2–4 short sentences and under 80 words. Use plain text by default: no Markdown headings, asterisks, tables, or LaTeX unless the learner asks for a structured explanation. Be warm and clear, and explain uncertainty when relevant. EchoAtlas uses small exploratory U-Net experiments, not the paper's MaskFormer. The same-split SNU test run had 66.7% accuracy, 61.7% balanced accuracy, 62.1% macro-F1, 80.5% macro-mAP, 50.4% mean Dice, and 39.8% mean IoU. This was one exploratory run on a duplicate-grouped image-level split, not patient-level validation or clinical evidence. Do not call macro-mAP accuracy or claim clinical utility. For urgent health concerns, suggest contacting a qualified healthcare professional."""
 
 
 def _chat_configured() -> bool:
@@ -295,7 +295,7 @@ async def assistant_chat(request: FastAPIRequest):
     request_body = json.dumps({
         "system_instruction": {"parts": [{"text": ECHOATLAS_CHAT_SYSTEM_PROMPT}]},
         "contents": contents,
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 700},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 256},
     }).encode("utf-8")
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{quote(model_name, safe='')}:generateContent"
     upstream = Request(endpoint, data=request_body, headers={
@@ -325,6 +325,65 @@ async def assistant_chat(request: FastAPIRequest):
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="Gemini returned an unexpected or empty chat response.") from exc
     return {"answer": answer.strip()[:12000], "model": model_name}
+
+
+@app.post("/api/assistant/figure")
+async def assistant_figure(request: FastAPIRequest):
+    """Generate a preset, abstract teaching illustration (never a patient scan)."""
+    if not _chat_configured():
+        raise HTTPException(status_code=503, detail="Gemini is not connected yet. Add GEMINI_API_KEY to the server environment.")
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="The figure request must be valid JSON.") from exc
+    topic = payload.get("topic") if isinstance(payload, dict) else None
+    prompts = {
+        "ultrasound": "Create a clean, simple educational vector infographic in a 3:2 landscape layout showing how B-mode ultrasound forms an image in three panels: a handheld probe sends sound pulses into abstract layered tissue; echoes reflect from tissue boundaries and return to the probe; echo strength becomes grayscale pixel rows in a flat 2D slice. Use simple geometric shapes, clear arrows, high contrast, and no words or letters. This is a conceptual teaching diagram, not a patient scan. Do not show a person, breast anatomy, a lesion, a tumor, cancer, or diagnosis.",
+        "masks": "Create a clean educational vector infographic in a 3:2 landscape layout with three side-by-side abstract panels: a grayscale ultrasound-like texture, a separate human-drawn reference overlay, and a separate experimental model overlay. Make the overlays visibly distinct and show that they may differ. Use simple shapes and labels-free high contrast; no words or letters. Do not show a person, breast anatomy, real scan, lesion, tumor, cancer, or diagnosis.",
+        "metrics": "Create a clean educational vector infographic in a 3:2 landscape layout explaining overlap between two regions: one outlined reference shape and one partly overlapping predicted shape, with their shared area highlighted. Show the idea of comparing overlap without equations or words. Use simple circles or rounded shapes, clear high contrast, and no text. This is a conceptual teaching diagram, not a clinical image or diagnostic result.",
+    }
+    if topic not in prompts:
+        raise HTTPException(status_code=422, detail="Choose one of the available learning diagram topics.")
+    model_name = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", model_name):
+        raise HTTPException(status_code=500, detail="The configured Gemini image model name is invalid.")
+    body = json.dumps({
+        "contents": [{"parts": [{"text": prompts[topic]}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "responseFormat": {"image": {"aspectRatio": "3:2", "imageSize": "1K"}},
+        },
+    }).encode("utf-8")
+    endpoint = f"https://generativelanguage.googleapis.com/v1/models/{quote(model_name, safe='')}:generateContent"
+    upstream = Request(endpoint, data=body, headers={
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-goog-api-key": os.environ["GEMINI_API_KEY"].strip(),
+    }, method="POST")
+    try:
+        with urlopen(upstream, timeout=90) as response:
+            result = json.loads(response.read(12_000_001).decode("utf-8"))
+    except HTTPError as exc:
+        if exc.code in (401, 403):
+            raise HTTPException(status_code=502, detail="Google rejected the Gemini API key or its image-generation access.") from exc
+        if exc.code == 429:
+            raise HTTPException(status_code=503, detail="Gemini image generation is busy or this key reached its quota.") from exc
+        raise HTTPException(status_code=502, detail=f"Gemini image generation failed with HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Could not reach Gemini image generation.") from exc
+    parts = result.get("candidates", [{}])[0].get("content", {}).get("parts", []) if result.get("candidates") else []
+    for part in parts:
+        image_data = None
+        if isinstance(part, dict):
+            image_data = part.get("inlineData") or part.get("inline_data")
+        if not isinstance(image_data, dict):
+            continue
+        mime_type = image_data.get("mimeType") or image_data.get("mime_type") or "image/png"
+        encoded = image_data.get("data")
+        if mime_type not in {"image/png", "image/jpeg", "image/webp"} or not isinstance(encoded, str) or len(encoded) > 11_000_000:
+            continue
+        return {"image_data_url": f"data:{mime_type};base64,{encoded}", "topic": topic}
+    raise HTTPException(status_code=502, detail="Gemini did not return a usable teaching illustration.")
 
 
 @app.post("/predict")

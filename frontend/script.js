@@ -51,7 +51,7 @@
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
-    chat: { configured: false, modelLabel: "Gemini Learning Guide", messages: [], attachment: null, imageConsent: false, sending: false, error: "" },
+    chat: { configured: false, modelLabel: "Gemini Learning Guide", messages: [], attachment: null, imageConsent: false, sending: false, busyKind: "reply", error: "" },
     atlasLocation: "Egypt",
     model: {
       online: false,
@@ -544,6 +544,96 @@
   // ---------------------------------------------------------------------
   // AI Learning Guide (server-side Gemini proxy; no credentials in the browser)
   // ---------------------------------------------------------------------
+  function cleanAssistantMarkup(value) {
+    return String(value || "")
+      .replace(/```[\s\S]*?```/g, block => block.replace(/```[^\n]*\n?/g, ""))
+      .replace(/\\text\{([^}]+)\}/g, "$1")
+      .replace(/\\mathrm\{([^}]+)\}/g, "$1")
+      .replace(/\\(?:approx|sim)\b/g, "≈")
+      .replace(/\\times\b/g, "×")
+      .replace(/\\cdot\b/g, "·")
+      .replace(/\\(?:leq|le)\b/g, "≤")
+      .replace(/\\(?:geq|ge)\b/g, "≥")
+      .replace(/\\rightarrow\b/g, "→")
+      .replace(/\$\$?([^$\n]+)\$\$?/g, "$1")
+      .replace(/\\\((.*?)\\\)|\\\[(.*?)\\\]/g, (_, inline, display) => inline || display || "")
+      .replace(/\\([A-Za-z]+)/g, "$1");
+  }
+
+  function appendAssistantInline(target, value) {
+    const pattern = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g;
+    let start = 0;
+    let match;
+    while ((match = pattern.exec(value))) {
+      if (match.index > start) target.append(document.createTextNode(value.slice(start, match.index)));
+      const token = match[0];
+      const link = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (link) {
+        const anchor = document.createElement("a");
+        anchor.textContent = link[1];
+        anchor.href = link[2];
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        target.append(anchor);
+      } else if (token.startsWith("**") || token.startsWith("__")) {
+        const strong = document.createElement("strong");
+        strong.textContent = token.slice(2, -2);
+        target.append(strong);
+      } else if (token.startsWith("`")) {
+        const code = document.createElement("code");
+        code.textContent = token.slice(1, -1);
+        target.append(code);
+      } else {
+        const emphasis = document.createElement("em");
+        emphasis.textContent = token.slice(1, -1);
+        target.append(emphasis);
+      }
+      start = pattern.lastIndex;
+    }
+    if (start < value.length) target.append(document.createTextNode(value.slice(start)));
+  }
+
+  function renderAssistantAnswer(target, raw) {
+    const lines = cleanAssistantMarkup(raw).replace(/\r/g, "").split("\n");
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      if (!line || /^\|?\s*:?-{3,}/.test(line)) { i += 1; continue; }
+      if (/^#{1,6}\s/.test(line)) {
+        const heading = document.createElement("p");
+        heading.className = "chat-answer-heading";
+        appendAssistantInline(heading, line.replace(/^#{1,6}\s*/, ""));
+        target.append(heading);
+        i += 1;
+        continue;
+      }
+      const ordered = line.match(/^\d+[.)]\s+(.+)/);
+      const bullet = line.match(/^[-*+]\s+(.+)/);
+      if (ordered || bullet) {
+        const list = document.createElement(ordered ? "ol" : "ul");
+        while (i < lines.length) {
+          const itemLine = lines[i].trim();
+          const item = ordered ? itemLine.match(/^\d+[.)]\s+(.+)/) : itemLine.match(/^[-*+]\s+(.+)/);
+          if (!item) break;
+          const li = document.createElement("li");
+          appendAssistantInline(li, item[1]);
+          list.append(li);
+          i += 1;
+        }
+        target.append(list);
+        continue;
+      }
+      const paragraph = document.createElement("p");
+      while (i < lines.length && lines[i].trim() && !/^#{1,6}\s|^[-*+]\s+|^\d+[.)]\s+/.test(lines[i].trim())) {
+        const plain = lines[i].trim().replace(/^\|\s*/, "").replace(/\s*\|\s*$/, "").replace(/\s*\|\s*/g, " · ");
+        if (paragraph.childNodes.length) paragraph.append(document.createTextNode(" "));
+        appendAssistantInline(paragraph, plain);
+        i += 1;
+      }
+      if (paragraph.textContent.trim()) target.append(paragraph);
+    }
+  }
+
   function renderChat() {
     const messagesEl = $("chatMessages");
     if (!messagesEl) return;
@@ -551,7 +641,7 @@
     if (!state.chat.messages.length) {
       const welcome = document.createElement("div");
       welcome.className = "chat-welcome";
-      welcome.innerHTML = '<div class="chat-welcome-mark" aria-hidden="true">✦</div><h2>Curious about an ultrasound concept?</h2><p>Ask a general learning question, or attach one image you’re permitted to share and ask about its visible features. The guide cannot diagnose or classify an image.</p>';
+      welcome.innerHTML = '<div class="chat-welcome-mark" aria-hidden="true">✦</div><h2>What would you like to learn?</h2><p>Ask about ultrasound, dataset labels, or model masks.</p>';
       messagesEl.appendChild(welcome);
     }
     state.chat.messages.forEach(message => {
@@ -568,8 +658,21 @@
         image.alt = message.imageName ? `Attached image: ${message.imageName}` : "Attached image";
         row.appendChild(image);
       }
-      const body = document.createElement("p");
-      body.textContent = message.text;
+      if (message.figureDataUrl) {
+        const figure = document.createElement("img");
+        figure.className = "chat-generated-figure";
+        figure.src = message.figureDataUrl;
+        figure.alt = message.figureAlt || "AI-generated educational diagram";
+        row.appendChild(figure);
+        const caption = document.createElement("span");
+        caption.className = "chat-figure-caption";
+        caption.textContent = "AI-generated illustration · for learning only";
+        row.appendChild(caption);
+      }
+      const body = document.createElement("div");
+      body.className = "chat-message-body";
+      if (message.role === "assistant") renderAssistantAnswer(body, message.text);
+      else body.textContent = message.text;
       row.appendChild(body);
       messagesEl.appendChild(row);
     });
@@ -577,7 +680,7 @@
       const pending = document.createElement("div");
       pending.className = "chat-thinking";
       pending.setAttribute("role", "status");
-      pending.textContent = `${state.chat.modelLabel} is preparing an educational reply…`;
+      pending.textContent = state.chat.busyKind === "figure" ? "Gemini is making your learning diagram…" : `${state.chat.modelLabel} is preparing a short reply…`;
       messagesEl.appendChild(pending);
     }
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -597,6 +700,7 @@
     $("chatSendBtn").disabled = !enabled || Boolean(attachment && !state.chat.imageConsent);
     $("chatUploadBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat;
     $("chatCurrentCaseBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat || !state.currentCase;
+    $("chatFigureBtn").disabled = !enabled;
   }
 
   async function refreshChatStatus() {
@@ -661,6 +765,7 @@
     state.chat.attachment = null;
     state.chat.imageConsent = false;
     state.chat.error = "";
+    state.chat.busyKind = "reply";
     input.value = "";
     state.chat.sending = true;
     renderChat();
@@ -689,7 +794,37 @@
     }
   }
 
+  async function createLearningFigure() {
+    if (!state.chat.configured || state.chat.sending) return;
+    const topic = $("chatFigureTopic").value;
+    const labels = {
+      ultrasound: { text: "This illustration shows how sound echoes become a 2D image.", alt: "Diagram of an ultrasound probe, returning echoes, and a 2D image" },
+      masks: { text: "This illustration separates a dataset annotation from an experimental AI mask.", alt: "Diagram comparing a dataset annotation and an experimental AI mask" },
+      metrics: { text: "This illustration shows how overlap metrics compare two regions.", alt: "Diagram showing the overlap between two regions" },
+    };
+    state.chat.sending = true;
+    state.chat.busyKind = "figure";
+    state.chat.error = "";
+    renderChat();
+    try {
+      const response = await fetch(`${API_BASE}/api/assistant/figure`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "Could not create the diagram.");
+      if (!/^data:image\/(png|jpeg|webp);base64,/.test(data.image_data_url || "")) throw new Error("Gemini returned an unsupported image format.");
+      state.chat.messages.push({ role: "assistant", text: labels[topic]?.text || "Here is a learning diagram.", figureDataUrl: data.image_data_url, figureAlt: labels[topic]?.alt });
+      state.chat.messages = state.chat.messages.slice(-12);
+    } catch (error) {
+      state.chat.error = error.message || "Could not create the diagram.";
+    } finally {
+      state.chat.sending = false;
+      renderChat();
+    }
+  }
+
   $("chatForm").addEventListener("submit", submitChat);
+  $("chatFigureBtn").addEventListener("click", createLearningFigure);
   $("chatInput").addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("chatForm").requestSubmit(); }
   });
