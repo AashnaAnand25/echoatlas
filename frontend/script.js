@@ -1,5 +1,5 @@
 /**
- * NEUROSCAN AI — Production Clinical AI Workstation Controller
+ * NEUROACCESS AI — Production Clinical AI Workstation Controller
  * Advanced Medical AI & Radiology Imaging Interface
  */
 
