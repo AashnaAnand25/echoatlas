@@ -51,6 +51,7 @@
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
+    chat: { configured: false, modelLabel: "Claude via C3", messages: [], attachment: null, sending: false, error: "" },
     atlasLocation: "Egypt",
     model: {
       online: false,
@@ -487,7 +488,8 @@
     classification: "Classification",
     explainability: "Explainability",
     history: "History / Reports",
-    sources: "Sources & Ethics"
+    sources: "Sources & Ethics",
+    chat: "AI Learning Guide"
   };
 
   function switchTab(tabId, opts = {}) {
@@ -518,6 +520,7 @@
     if (tabId === "explainability") renderExplain();
     if (tabId === "history") { renderHistory(); renderReport(); }
     if (tabId === "sources") renderSources();
+    if (tabId === "chat") { refreshChatStatus(); renderChat(); }
 
     if (opts.focus !== false) {
       const heading = document.querySelector(`#view-${tabId} h1`);
@@ -537,6 +540,193 @@
     e.preventDefault();
     switchTab(el.getAttribute("data-tab"));
   }, true);
+
+  // ---------------------------------------------------------------------
+  // AI Learning Guide (server-side C3 proxy; no credentials in the browser)
+  // ---------------------------------------------------------------------
+  function renderChat() {
+    const messagesEl = $("chatMessages");
+    if (!messagesEl) return;
+    messagesEl.replaceChildren();
+    if (!state.chat.messages.length) {
+      const welcome = document.createElement("div");
+      welcome.className = "chat-welcome";
+      welcome.innerHTML = '<div class="chat-welcome-mark" aria-hidden="true">✦</div><h2>Curious about an ultrasound concept?</h2><p>Ask a general learning question, or attach one image you’re permitted to share and ask about its visible features. The guide cannot diagnose or classify an image.</p>';
+      messagesEl.appendChild(welcome);
+    }
+    state.chat.messages.forEach(message => {
+      const row = document.createElement("article");
+      row.className = `chat-message chat-message-${message.role}`;
+      const label = document.createElement("span");
+      label.className = "chat-message-label";
+      label.textContent = message.role === "user" ? "You" : state.chat.modelLabel;
+      row.appendChild(label);
+      if (message.imageDataUrl) {
+        const image = document.createElement("img");
+        image.className = "chat-message-image";
+        image.src = message.imageDataUrl;
+        image.alt = message.imageName ? `Attached image: ${message.imageName}` : "Attached image";
+        row.appendChild(image);
+      }
+      const body = document.createElement("p");
+      body.textContent = message.text;
+      row.appendChild(body);
+      messagesEl.appendChild(row);
+    });
+    if (state.chat.sending) {
+      const pending = document.createElement("div");
+      pending.className = "chat-thinking";
+      pending.setAttribute("role", "status");
+      pending.textContent = `${state.chat.modelLabel} is preparing an educational reply…`;
+      messagesEl.appendChild(pending);
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    const attachment = state.chat.attachment;
+    $("chatAttachment").hidden = !attachment;
+    if (attachment) {
+      $("chatAttachmentPreview").src = attachment.dataUrl;
+      setText("chatAttachmentName", attachment.name);
+    }
+    $("chatError").hidden = !state.chat.error;
+    setText("chatError", state.chat.error);
+    const enabled = state.chat.configured && !state.chat.sending;
+    const imageAlreadyInChat = state.chat.messages.some(message => Boolean(message.imageDataUrl));
+    $("chatInput").disabled = !enabled;
+    $("chatSendBtn").disabled = !enabled;
+    $("chatUploadBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat;
+    $("chatCurrentCaseBtn").disabled = !enabled || Boolean(attachment) || imageAlreadyInChat || !state.currentCase;
+  }
+
+  async function refreshChatStatus() {
+    try {
+      const response = await fetch(`${API_BASE}/api/assistant/status`);
+      if (!response.ok) throw new Error("status unavailable");
+      const data = await response.json();
+      state.chat.configured = Boolean(data.configured);
+      state.chat.modelLabel = data.model_label || "Claude via C3";
+      setText("chatModelStatus", state.chat.configured ? "Connected through the EchoAtlas server" : "C3 route not configured yet");
+      const notice = $("chatConnectionNotice");
+      notice.textContent = state.chat.configured
+        ? "Connected. Messages and any attached image are sent to the configured C3 route when you press Send."
+        : "Not connected yet. The chat screen is ready, but your local server still needs a C3 Claude chat endpoint and private credential.";
+      notice.classList.toggle("is-connected", state.chat.configured);
+    } catch (error) {
+      state.chat.configured = false;
+      setText("chatModelStatus", "EchoAtlas server not reachable");
+      const notice = $("chatConnectionNotice");
+      if (notice) notice.textContent = "Start or reconnect the EchoAtlas server to check the C3 chat connection.";
+    }
+    renderChat();
+  }
+
+  async function chatImageDataUrl(file) {
+    if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPG, PNG, or WebP image.");
+    if (file.size > 4 * 1024 * 1024) throw new Error("Choose an image smaller than 4 MB.");
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read that image."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function chatContextText(text, c) {
+    if (!c) return text;
+    const label = c.refLabel ? labelOf(c.refLabel) : "not available (uploaded image)";
+    const prediction = c.analysis && c.analysis.trained && c.analysis.prediction
+      ? `${labelOf(c.analysis.prediction)} (${Number(c.analysis.confidence || 0).toFixed(1)}%, experimental)`
+      : "not run / not available";
+    return `${text}\n\nContext from the EchoAtlas learning app (not clinical truth): case ${c.id}; dataset reference label: ${label}; experimental model output: ${prediction}. Keep these sources distinct.`;
+  }
+
+  async function submitChat(event) {
+    event.preventDefault();
+    if (!state.chat.configured || state.chat.sending) return;
+    const input = $("chatInput");
+    const text = input.value.trim();
+    const attachment = state.chat.attachment;
+    if (!text && !attachment) { input.focus(); return; }
+    const userMessage = { role: "user", text: chatContextText(text || "Please explain general visible ultrasound features in this image without diagnosing it.", attachment && attachment.case) };
+    if (attachment) { userMessage.imageDataUrl = attachment.dataUrl; userMessage.imageName = attachment.name; }
+    state.chat.messages.push(userMessage);
+    state.chat.messages = state.chat.messages.slice(-12);
+    state.chat.attachment = null;
+    state.chat.error = "";
+    input.value = "";
+    state.chat.sending = true;
+    renderChat();
+    const messages = state.chat.messages.map(message => {
+      const textContent = message.text || "";
+      const content = message.imageDataUrl
+        ? [{ type: "text", text: textContent }, { type: "image_url", image_url: { url: message.imageDataUrl } }]
+        : textContent;
+      return { role: message.role, content };
+    });
+    try {
+      const response = await fetch(`${API_BASE}/api/assistant/chat`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "The C3 chat request failed. Please try again.");
+      state.chat.modelLabel = data.model || state.chat.modelLabel;
+      state.chat.messages.push({ role: "assistant", text: String(data.answer || "") });
+      state.chat.messages = state.chat.messages.slice(-12);
+    } catch (error) {
+      state.chat.error = error.message || "Could not reach the C3 chat service.";
+    } finally {
+      state.chat.sending = false;
+      renderChat();
+      if (state.chat.error) $("chatError").focus?.();
+    }
+  }
+
+  $("chatForm").addEventListener("submit", submitChat);
+  $("chatInput").addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("chatForm").requestSubmit(); }
+  });
+  $("chatUploadBtn").addEventListener("click", () => $("chatFileInput").click());
+  $("chatFileInput").addEventListener("change", async event => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      state.chat.attachment = { name: file.name, dataUrl: await chatImageDataUrl(file), case: null };
+      state.chat.error = "";
+    } catch (error) { state.chat.error = error.message; }
+    renderChat();
+  });
+  $("chatCurrentCaseBtn").addEventListener("click", async () => {
+    const c = state.currentCase;
+    if (!c || state.chat.attachment) return;
+    try {
+      let dataUrl = c.imageUrl;
+      if (!dataUrl.startsWith("data:")) {
+        const response = await fetch(dataUrl);
+        if (!response.ok) throw new Error("Could not load the open case image.");
+        const blob = await response.blob();
+        if (blob.size > 4 * 1024 * 1024) throw new Error("This case image is over the 4 MB chat limit.");
+        dataUrl = await chatImageDataUrl(new File([blob], c.filename || "case-image.png", { type: blob.type || "image/png" }));
+      }
+      if (dataUrl.length > 5_600_000) throw new Error("This case image is over the 4 MB chat limit.");
+      state.chat.attachment = { name: c.filename || c.id, dataUrl, case: c };
+      state.chat.error = "";
+    } catch (error) { state.chat.error = error.message; }
+    renderChat();
+  });
+  $("chatRemoveAttachmentBtn").addEventListener("click", () => { state.chat.attachment = null; renderChat(); });
+  $("chatClearBtn").addEventListener("click", () => {
+    state.chat.messages = [];
+    state.chat.attachment = null;
+    state.chat.error = "";
+    renderChat();
+    $("chatInput").focus();
+  });
+  $("chatSuggestions").addEventListener("click", event => {
+    const button = event.target.closest(".chat-suggestion");
+    if (!button) return;
+    $("chatInput").value = button.textContent.trim();
+    $("chatInput").focus();
+  });
 
   const atlasSearch = $("atlasSearch");
   if (atlasSearch) atlasSearch.addEventListener("input", () => renderAtlas(atlasSearch.value));

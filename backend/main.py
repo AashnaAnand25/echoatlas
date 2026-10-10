@@ -6,10 +6,11 @@ import re
 import shutil
 import time
 import uuid
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 import torch
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -34,6 +35,53 @@ app = FastAPI(title="EchoAtlas - Breast Ultrasound Research API")
 ATLAS_README_URL = "https://raw.githubusercontent.com/NKI-MedTech-AI/breast-ultrasound-openhub/main/README.md"
 ATLAS_CACHE_SECONDS = 6 * 60 * 60
 _atlas_cache = {"expires_at": 0, "payload": None}
+
+ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly educational tutor for breast-ultrasound concepts and public research datasets. This application is not for diagnosis or clinical decision-making. Never determine whether an image is benign, malignant, cancer, or a diagnosis; do not provide treatment recommendations. If asked to interpret a scan, explain that you can discuss general visual concepts but cannot diagnose or classify an individual image. Clearly separate BUSI dataset reference labels from experimental model outputs and never treat either as clinical truth. Explain uncertainty and limitations in plain language, ask clarifying questions when useful, and keep replies concise and supportive. EchoAtlas' exploratory seed-42 runs are small U-Net experiments, not clinical evidence and not the paper's MaskFormer: the MPS held-out test results were accuracy 0.692, balanced accuracy 0.686, macro-F1 0.671, macro-mAP 0.817, mean Dice 0.629, mean IoU 0.548; the same-split SNU RTX 4090 run was accuracy 0.667, balanced accuracy 0.617, macro-F1 0.621, macro-mAP 0.805, mean Dice 0.504, mean IoU 0.398. Both used a duplicate-grouped image-level split, not patient-level validation, and each is a single exploratory run. Do not call macro-mAP accuracy or claim clinical utility. For urgent health concerns, recommend speaking with a qualified healthcare professional."""
+
+
+def _chat_configured() -> bool:
+    """This proxy expects a C3-hosted, OpenAI-compatible chat route."""
+    endpoint = os.environ.get("ECHOATLAS_C3_CHAT_URL", "").strip()
+    token = os.environ.get("ECHOATLAS_C3_CHAT_TOKEN", "").strip()
+    parsed = urlparse(endpoint)
+    safe_scheme = parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost"})
+    return bool(endpoint and token and parsed.hostname and safe_scheme)
+
+
+def _sanitize_chat_messages(messages):
+    if not isinstance(messages, list) or not 1 <= len(messages) <= 12:
+        raise HTTPException(status_code=422, detail="Send between 1 and 12 recent chat messages.")
+    cleaned = [{"role": "system", "content": ECHOATLAS_CHAT_SYSTEM_PROMPT}]
+    total_chars = 0
+    for message in messages:
+        if not isinstance(message, dict) or message.get("role") not in {"user", "assistant"}:
+            raise HTTPException(status_code=422, detail="Chat messages must have user or assistant roles.")
+        content = message.get("content")
+        if isinstance(content, str):
+            total_chars += len(content)
+            cleaned.append({"role": message["role"], "content": content[:4000]})
+            continue
+        if not isinstance(content, list) or len(content) > 4:
+            raise HTTPException(status_code=422, detail="Unsupported chat content format.")
+        safe_parts = []
+        for part in content:
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "text" and isinstance(part.get("text"), str):
+                text = part["text"][:4000]
+                total_chars += len(text)
+                safe_parts.append({"type": "text", "text": text})
+            elif part.get("type") == "image_url" and message["role"] == "user":
+                image_url = (part.get("image_url") or {}).get("url", "")
+                if not isinstance(image_url, str) or not image_url.startswith(("data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,")):
+                    raise HTTPException(status_code=422, detail="Only an explicitly attached JPG, PNG, or WebP image is supported.")
+                if len(image_url) > 5_600_000:
+                    raise HTTPException(status_code=413, detail="Image is too large. Choose an image under 4 MB.")
+                safe_parts.append({"type": "image_url", "image_url": {"url": image_url}})
+        cleaned.append({"role": message["role"], "content": safe_parts})
+    if total_chars > 18000:
+        raise HTTPException(status_code=413, detail="Chat context is too long. Clear the chat and try again.")
+    return cleaned
 
 app.add_middleware(
     CORSMiddleware,
@@ -204,6 +252,63 @@ def get_dataset_atlas():
         if _atlas_cache["payload"]:
             return {**_atlas_cache["payload"], "stale": True}
         raise HTTPException(status_code=503, detail="Public dataset catalog is temporarily unavailable.")
+
+@app.get("/api/assistant/status")
+async def get_assistant_status():
+    return {
+        "configured": _chat_configured(),
+        "provider": "C3",
+        "model_label": os.environ.get("ECHOATLAS_C3_CHAT_LABEL", "Claude via C3"),
+    }
+
+
+@app.post("/api/assistant/chat")
+async def assistant_chat(request: FastAPIRequest):
+    """Server-side proxy; credentials and provider errors never reach frontend JS."""
+    if not _chat_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Claude through C3 is not connected yet. Configure the server-side C3 chat endpoint and credential.",
+        )
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="The chat request must be valid JSON.") from exc
+    messages = _sanitize_chat_messages(payload.get("messages") if isinstance(payload, dict) else None)
+    endpoint = os.environ["ECHOATLAS_C3_CHAT_URL"].strip()
+    token = os.environ["ECHOATLAS_C3_CHAT_TOKEN"].strip()
+    auth_header = os.environ.get("ECHOATLAS_C3_AUTH_HEADER", "Authorization").strip()
+    auth_scheme = os.environ.get("ECHOATLAS_C3_AUTH_SCHEME", "Bearer").strip()
+    request_body = json.dumps({
+        "model": os.environ.get("ECHOATLAS_C3_CHAT_MODEL", "claude-via-c3"),
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": 700,
+    }).encode("utf-8")
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers[auth_header] = f"{auth_scheme} {token}" if auth_scheme else token
+    upstream = Request(endpoint, data=request_body, headers=headers, method="POST")
+    try:
+        with urlopen(upstream, timeout=45) as response:
+            result = json.loads(response.read(2_000_001).decode("utf-8"))
+    except HTTPError as exc:
+        if exc.code in (401, 403):
+            raise HTTPException(status_code=502, detail="C3 rejected the configured credential or access scope.") from exc
+        if exc.code == 429:
+            raise HTTPException(status_code=503, detail="The C3 Claude route is busy. Please try again shortly.") from exc
+        raise HTTPException(status_code=502, detail=f"C3 chat request failed with HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Could not reach the configured C3 chat route.") from exc
+    try:
+        answer = result["choices"][0]["message"]["content"]
+        if isinstance(answer, list):
+            answer = "\n".join(part.get("text", "") for part in answer if isinstance(part, dict))
+        if not isinstance(answer, str) or not answer.strip():
+            raise ValueError("empty completion")
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="C3 returned an unexpected chat response format.") from exc
+    return {"answer": answer.strip()[:12000], "model": os.environ.get("ECHOATLAS_C3_CHAT_LABEL", "Claude via C3")}
+
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
