@@ -2203,6 +2203,30 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 24px;
 }
 
+/* Classification: keep the caution and reference comparison as readable as
+   the result. Scope these refinements so viewer/model behavior is untouched. */
+#view-classification .prob-row-header,
+#view-classification .disclaimer-callout,
+#view-classification #uncertaintyNote {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+#view-classification #uncertaintyNote {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-highlight);
+}
+#view-classification .probabilities-section { margin-block: 1.25rem; }
+#view-classification .prob-bars-list { gap: 1rem; }
+#view-classification .prob-class-val { font-variant-numeric: tabular-nums; }
+#view-classification .prob-bar-track {
+  height: 0.625rem;
+  /* A dark track contrasts with all three existing fill colors in both themes.
+     Widths and fill colors continue to come from the unchanged model output. */
+  background: #102132;
+  border-color: var(--border-highlight);
+}
+
 .spec-table-list {
   display: flex;
   flex-direction: column;
