@@ -3,21 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEUROACCESS AI — AI-Powered Brain MRI Classification Workstation</title>
-  
+  <title>EchoAtlas — Accessible Breast-Ultrasound Case-Learning Workstation</title>
+  <meta name="description" content="EchoAtlas is an educational, non-diagnostic breast-ultrasound case explorer: compare a public case's scan, its dataset annotation, and an experimental model mask.">
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Fallback accessibility utilities (move into style.css when Person 2 adds them) -->
+  <style>
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 10000; padding: 8px 14px; background: #0b1f33; color: #fff; border: 2px solid #2EC4B6; border-radius: 6px; }
+    .skip-link:focus { left: 8px; }
+  </style>
 </head>
 <body>
 
-  <!-- Subtle Medical Ambient Grid & Scanlines -->
-  <div class="ambient-grid"></div>
-  <div class="ambient-glow glow-cyan"></div>
-  <div class="ambient-glow glow-purple"></div>
+  <a class="skip-link" id="skipLink" href="#mainContent">Skip to main content</a>
+
+  <!-- Subtle ambient background -->
+  <div class="ambient-grid" aria-hidden="true"></div>
+  <div class="ambient-glow glow-cyan" aria-hidden="true"></div>
+  <div class="ambient-glow glow-purple" aria-hidden="true"></div>
 
   <!-- App Wrapper -->
   <div class="app-layout">
@@ -27,42 +37,43 @@
     <!-- ================================================== -->
     <header class="top-nav">
       <div class="nav-left">
-        <div class="brand" id="brandHomeBtn" role="button" tabindex="0" title="NeuroAccess AI Home">
-          <div class="brand-symbol">
+        <div class="brand" id="brandHomeBtn" role="button" tabindex="0" aria-label="EchoAtlas home" title="EchoAtlas Home">
+          <div class="brand-symbol" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="url(#cyanPurpGrad)" stroke-width="1.6" stroke-dasharray="3 2" />
-              <circle cx="12" cy="12" r="6" stroke="#39D5FF" stroke-width="1.4" />
-              <path d="M12 2V6 M12 18V22 M2 12H6 M18 12H22" stroke="#7C6CFF" stroke-width="1.4" stroke-linecap="round" />
-              <circle cx="12" cy="12" r="2.2" fill="#39D5FF" />
+              <path d="M3 18a9 9 0 0 1 18 0" stroke="url(#echoGrad)" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M6.5 18a5.5 5.5 0 0 1 11 0" stroke="#2EC4B6" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M10 18a2 2 0 0 1 4 0" stroke="#FF7F6E" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="12" cy="18" r="1.4" fill="#FF7F6E"/>
+              <path d="M12 3v3" stroke="#2EC4B6" stroke-width="1.4" stroke-linecap="round"/>
               <defs>
-                <linearGradient id="cyanPurpGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#39D5FF" />
-                  <stop offset="1" stop-color="#7C6CFF" />
+                <linearGradient id="echoGrad" x1="3" y1="9" x2="21" y2="18" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#2EC4B6"/>
+                  <stop offset="1" stop-color="#FF7F6E"/>
                 </linearGradient>
               </defs>
             </svg>
           </div>
           <div class="brand-text">
-            <span class="brand-title">NEUROACCESS <span class="brand-highlight">AI</span></span>
-            <span class="brand-subtitle">AI IMAGING LAB &middot; RESEARCH WORKSTATION</span>
+            <span class="brand-title">ECHO<span class="brand-highlight">ATLAS</span></span>
+            <span class="brand-subtitle">ULTRASOUND CASE LEARNING &middot; EDUCATIONAL WORKSTATION</span>
           </div>
         </div>
 
         <div class="lab-badge">
-          <span class="pulse-dot"></span>
-          <span class="lab-badge-text">MRI RESEARCH DEMO</span>
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="lab-badge-text">EDUCATIONAL DEMO &middot; NOT FOR DIAGNOSIS</span>
         </div>
       </div>
 
       <div class="nav-right">
-        <div class="system-status-badge">
-          <span class="status-indicator online" id="systemStatusDot"></span>
-          <span class="status-label" id="systemStatusText">SYSTEM ONLINE</span>
-          <span class="telemetry-chip mono" id="latencyChip">32 ms</span>
+        <div class="system-status-badge" role="status" aria-live="polite">
+          <span class="status-indicator offline" id="systemStatusDot" aria-hidden="true"></span>
+          <span class="status-label" id="systemStatusText">CHECKING MODEL API…</span>
+          <span class="telemetry-chip mono" id="latencyChip">—</span>
         </div>
 
-        <button class="btn btn-secondary-sm theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark/Light Workstation Mode">
-          <svg class="theme-icon sun-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="btn btn-secondary-sm theme-toggle-btn" id="themeToggleBtn" type="button" title="Toggle dark / light mode">
+          <svg class="theme-icon sun-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -73,20 +84,20 @@
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
-          <svg class="theme-icon moon-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg class="theme-icon moon-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
           <span class="theme-label" id="themeLabel">Light Mode</span>
         </button>
 
-        <button class="btn btn-secondary-sm" id="disclaimerModalBtn" title="Non-Diagnostic Research Notice">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Research Notice</span>
+        <button class="btn btn-secondary-sm" id="disclaimerModalBtn" type="button" title="Educational, non-diagnostic notice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Educational Notice</span>
         </button>
 
-        <button class="btn btn-primary-sm" id="quickAnalyzeBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Analyze MRI</span>
+        <button class="btn btn-primary-sm" id="quickCaseBtn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Open Case Library</span>
         </button>
       </div>
     </header>
@@ -97,99 +108,71 @@
       <!-- LEFT SIDEBAR                                       -->
       <!-- ================================================== -->
       <aside class="sidebar">
-        <div class="sidebar-section-title">NAVIGATION</div>
-        <ul class="sidebar-menu">
-          <li>
-            <button class="sidebar-item active" data-tab="overview">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-              <span>Overview</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="upload">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>New Scan &amp; Samples</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="workspace">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="3"/></svg>
-              <span>MRI Workspace</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="explainability">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span>Explainability</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="models">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              <span>Model Lab</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="history">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Scan History</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="reports">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <span>Reports</span>
-            </button>
-          </li>
-          <li>
-            <button class="sidebar-item" data-tab="docs">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              <span>Docs &amp; Ethics</span>
-            </button>
-          </li>
-        </ul>
+        <nav aria-label="Primary">
+          <div class="sidebar-section-title">NAVIGATION</div>
+          <ul class="sidebar-menu">
+            <li>
+              <button class="sidebar-item active" type="button" data-tab="overview" aria-current="page">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                <span>Overview</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="library">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span>Case Library</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="workspace">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 18a9 9 0 0 1 18 0"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/><circle cx="12" cy="18" r="1.5"/><path d="M12 3v4"/></svg>
+                <span>Ultrasound Workspace</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="classification">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Classification</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="explainability">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>Explainability</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="history">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>History / Reports</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-item" type="button" data-tab="sources">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                <span>Sources &amp; Ethics</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
 
-        <!-- QUICK PRESETS DRAWER (FILLS EMPTY SPACE PRODUCTIVELY) -->
+        <!-- Featured cases -->
         <div class="sidebar-presets-section">
-          <div class="sidebar-section-title">BENCHMARK SCANS</div>
-          <div class="sidebar-presets-list">
-            <button class="sidebar-preset-item btn-sample-run" data-sample="glioma">
-              <span class="preset-dot danger"></span>
-              <span class="preset-lbl">Glioma #204</span>
-              <span class="preset-tag">T1-CE</span>
-            </button>
-            <button class="sidebar-preset-item btn-sample-run" data-sample="meningioma">
-              <span class="preset-dot warning"></span>
-              <span class="preset-lbl">Meningioma #118</span>
-              <span class="preset-tag">Dural</span>
-            </button>
-            <button class="sidebar-preset-item btn-sample-run" data-sample="pituitary">
-              <span class="preset-dot purple"></span>
-              <span class="preset-lbl">Pituitary #092</span>
-              <span class="preset-tag">Sellar</span>
-            </button>
-            <button class="sidebar-preset-item btn-sample-run" data-sample="notumor">
-              <span class="preset-dot success"></span>
-              <span class="preset-lbl">Control #044</span>
-              <span class="preset-tag">Normal</span>
-            </button>
-            <button class="sidebar-preset-item btn-sample-run" data-sample="glioma2">
-              <span class="preset-dot danger"></span>
-              <span class="preset-lbl">Astrocytoma #315</span>
-              <span class="preset-tag">T2</span>
-            </button>
+          <div class="sidebar-section-title">FEATURED CASES</div>
+          <div class="sidebar-presets-list" id="sidebarCaseList">
+            <!-- Rendered by script.js -->
           </div>
         </div>
 
         <div class="sidebar-footer">
           <div class="model-telemetry-box">
             <div class="telemetry-header">
-              <span class="telemetry-dot"></span>
-              <span class="telemetry-name">NEUROACCESS AI ENGINE</span>
+              <span class="telemetry-dot" aria-hidden="true"></span>
+              <span class="telemetry-name">MODEL STATUS</span>
             </div>
             <div class="telemetry-meta">
-              <span>Status: <strong class="text-success">Research demo</strong></span>
-              <span>Upstream-reported test accuracy: <strong>94.56%</strong></span>
+              <span>State: <strong id="sidebarModelState">Checking…</strong></span>
+              <span>Device: <strong id="sidebarDeviceName">—</strong></span>
             </div>
           </div>
         </div>
@@ -198,420 +181,238 @@
       <!-- ================================================== -->
       <!-- MAIN CONTENT VIEW CONTAINER                        -->
       <!-- ================================================== -->
-      <main class="main-content" id="mainContent">
+      <main class="main-content" id="mainContent" tabindex="-1">
 
         <!-- ============================================== -->
-        <!-- VIEW 1: OVERVIEW / DASHBOARD                   -->
+        <!-- TAB 1: OVERVIEW                                -->
         <!-- ============================================== -->
-        <section class="tab-view active" id="view-overview">
+        <section class="tab-view active" id="view-overview" aria-labelledby="title-overview">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Brain MRI Intelligence</h1>
-              <p class="view-subtitle">AI-assisted classification and explainable imaging workspace for neuro-oncology research.</p>
+              <h1 class="view-title" id="title-overview" tabindex="-1">EchoAtlas: learn to read an ultrasound case</h1>
+              <p class="view-subtitle">An educational explorer for breast-ultrasound cases. Open a public case, compare the original scan with its expert annotation and an experimental model overlay, and read what each one does &mdash; and does not &mdash; tell you.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-secondary" data-tab="history">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>View History</span>
+              <button class="btn btn-secondary" type="button" data-tab="sources">
+                <span>Sources &amp; Ethics</span>
               </button>
-              <button class="btn btn-primary" data-tab="upload">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Analyze New MRI</span>
+              <button class="btn btn-primary" type="button" data-tab="library">
+                <span>Open Case Library</span>
               </button>
             </div>
           </div>
 
-          <!-- 5 CLINICAL BENCHMARK PRESET MRI SHOWCASE (LARGE & SPACIOUS) -->
-          <div class="card overview-showcase-card">
+          <div class="card doc-card">
+            <div class="disclaimer-callout">
+              <strong>Educational use only:</strong>
+              EchoAtlas is a learning tool for medical learners. It is not a patient-facing diagnostic tool and not a clinical decision system. Dataset labels are reference labels, and model output is experimental &mdash; neither is a diagnosis.
+            </div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">CASES IN LIBRARY</span>
+                <span class="metric-icon-wrap cyan" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </span>
+              </div>
+              <div class="metric-value mono" id="overviewCaseCount">0</div>
+              <div class="metric-footer" id="overviewCaseSource">Loading case source…</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">MODEL STATUS</span>
+                <span class="metric-icon-wrap purple" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </span>
+              </div>
+              <div class="metric-value mono" id="overviewModelState" style="font-size:1.25rem;">Checking…</div>
+              <div class="metric-footer" id="overviewModelNote">Model output appears only when a trained checkpoint is loaded.</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-label">THIS SESSION</span>
+                <span class="metric-icon-wrap green" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+              </div>
+              <div class="metric-value mono" id="overviewSessionCount">0</div>
+              <div class="metric-footer">Local demo activity (cases opened and model runs)</div>
+            </div>
+          </div>
+
+          <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Clinical Benchmark Studies (5 Authentic MRI Presets)</h3>
-                <p class="card-desc">Click any scan to immediately evaluate tumor morphology with Grad-CAM, or drag it into the dropzone:</p>
-              </div>
-              <div class="badge-group">
-                <span class="badge badge-cyan">⚡ Instant Test</span>
-                <span class="badge badge-secondary mono">1-Click / Drag &amp; Drop</span>
+                <h2 class="card-title">The learner journey</h2>
+                <p class="card-desc">Four steps, in plain language:</p>
               </div>
             </div>
-            
-            <div class="sample-scans-showcase">
-              <!-- Case 1: Glioma -->
-              <button class="sample-scan-btn" data-sample="glioma" draggable="true" title="Click to analyze Glioma #204">
-                <div class="sample-thumb-wrapper">
-                  <img class="sample-scan-thumb" id="thumbGlioma1" src="" alt="Glioma MRI">
-                  <span class="badge badge-danger thumb-badge">Glioma</span>
-                  <div class="thumb-drag-indicator">&equiv; Drag</div>
-                  <div class="thumb-reticle tr"></div>
-                  <div class="thumb-reticle bl"></div>
-                </div>
-                <div class="sample-scan-info">
-                  <span class="sample-name">Glioma Case #204</span>
-                  <span class="sample-meta mono">Frontal Mass &middot; Axial T1-CE</span>
-                  <div class="sample-cta-row">
-                    <span class="cta-label">⚡ Instant Test</span>
-                    <span class="cta-arrow">&rarr;</span>
-                  </div>
-                </div>
-              </button>
-
-              <!-- Case 2: Meningioma -->
-              <button class="sample-scan-btn" data-sample="meningioma" draggable="true" title="Click to analyze Meningioma #118">
-                <div class="sample-thumb-wrapper">
-                  <img class="sample-scan-thumb" id="thumbMeningioma" src="" alt="Meningioma MRI">
-                  <span class="badge badge-warning thumb-badge">Meningioma</span>
-                  <div class="thumb-drag-indicator">&equiv; Drag</div>
-                  <div class="thumb-reticle tr"></div>
-                  <div class="thumb-reticle bl"></div>
-                </div>
-                <div class="sample-scan-info">
-                  <span class="sample-name">Meningioma #118</span>
-                  <span class="sample-meta mono">Dural Convexity Mass</span>
-                  <div class="sample-cta-row">
-                    <span class="cta-label">⚡ Instant Test</span>
-                    <span class="cta-arrow">&rarr;</span>
-                  </div>
-                </div>
-              </button>
-
-              <!-- Case 3: Pituitary -->
-              <button class="sample-scan-btn" data-sample="pituitary" draggable="true" title="Click to analyze Pituitary #092">
-                <div class="sample-thumb-wrapper">
-                  <img class="sample-scan-thumb" id="thumbPituitary" src="" alt="Pituitary MRI">
-                  <span class="badge badge-purple thumb-badge">Pituitary</span>
-                  <div class="thumb-drag-indicator">&equiv; Drag</div>
-                  <div class="thumb-reticle tr"></div>
-                  <div class="thumb-reticle bl"></div>
-                </div>
-                <div class="sample-scan-info">
-                  <span class="sample-name">Pituitary #092</span>
-                  <span class="sample-meta mono">Sellar Region Adenoma</span>
-                  <div class="sample-cta-row">
-                    <span class="cta-label">⚡ Instant Test</span>
-                    <span class="cta-arrow">&rarr;</span>
-                  </div>
-                </div>
-              </button>
-
-              <!-- Case 4: No Tumor -->
-              <button class="sample-scan-btn" data-sample="notumor" draggable="true" title="Click to analyze Normal Control #044">
-                <div class="sample-thumb-wrapper">
-                  <img class="sample-scan-thumb" id="thumbNoTumor" src="" alt="Normal Brain MRI">
-                  <span class="badge badge-success thumb-badge">No Tumor</span>
-                  <div class="thumb-drag-indicator">&equiv; Drag</div>
-                  <div class="thumb-reticle tr"></div>
-                  <div class="thumb-reticle bl"></div>
-                </div>
-                <div class="sample-scan-info">
-                  <span class="sample-name">Control #044</span>
-                  <span class="sample-meta mono">Healthy Brain Parenchyma</span>
-                  <div class="sample-cta-row">
-                    <span class="cta-label">⚡ Instant Test</span>
-                    <span class="cta-arrow">&rarr;</span>
-                  </div>
-                </div>
-              </button>
-
-              <!-- Case 5: Astrocytoma T2 -->
-              <button class="sample-scan-btn" data-sample="glioma2" draggable="true" title="Click to analyze Astrocytoma #315">
-                <div class="sample-thumb-wrapper">
-                  <img class="sample-scan-thumb" id="thumbGlioma2" src="" alt="Astrocytoma T2 MRI">
-                  <span class="badge badge-danger thumb-badge">Glioma (T2)</span>
-                  <div class="thumb-drag-indicator">&equiv; Drag</div>
-                  <div class="thumb-reticle tr"></div>
-                  <div class="thumb-reticle bl"></div>
-                </div>
-                <div class="sample-scan-info">
-                  <span class="sample-name">Astrocytoma #315</span>
-                  <span class="sample-meta mono">Temporal Lobe T2 Signal</span>
-                  <div class="sample-cta-row">
-                    <span class="cta-label">⚡ Instant Test</span>
-                    <span class="cta-arrow">&rarr;</span>
-                  </div>
-                </div>
-              </button>
+            <div class="upload-guidelines-grid">
+              <div class="guide-card">
+                <div class="guide-num">01</div>
+                <h3>Pick a case</h3>
+                <p>Choose a de-identified public example from the Case Library, or load an image of your own.</p>
+              </div>
+              <div class="guide-card">
+                <div class="guide-num">02</div>
+                <h3>Look at the scan</h3>
+                <p>Zoom and adjust brightness and contrast to examine the lesion's shape and edges before seeing any labels.</p>
+              </div>
+              <div class="guide-card">
+                <div class="guide-num">03</div>
+                <h3>Compare the layers</h3>
+                <p>Switch on the <strong>expert annotation</strong> (from the dataset) and, if available, the <strong>model mask</strong> (experimental). They are shown separately on purpose.</p>
+              </div>
+              <div class="guide-card">
+                <div class="guide-num">04</div>
+                <h3>Check the labels</h3>
+                <p>Compare the dataset's reference label with the model's output, and read how uncertain each one is.</p>
+              </div>
             </div>
           </div>
 
-          <!-- LOWER SECTION: RECENT STUDIES & QUICK UPLOAD CTA -->
           <div class="overview-bottom-layout">
-            <!-- RECENT STUDIES SUMMARY TABLE -->
             <div class="card overview-recent-card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">Recent Study Activity</h3>
-                  <p class="card-sub-mono mono">Live session inference log &amp; historical MRI telemetry</p>
+                  <h3 class="card-title">Recent activity</h3>
+                  <p class="card-sub-mono mono">Local demo session &middot; educational output</p>
                 </div>
-                <button class="btn-link" data-tab="history">View All Studies &rarr;</button>
+                <button class="btn-link" type="button" data-tab="history">View all &rarr;</button>
               </div>
               <div class="recent-table-wrap">
                 <table class="data-table">
+                  <caption class="sr-only">Recent session activity</caption>
                   <thead>
                     <tr>
-                      <th>Study ID</th>
-                      <th>Classified Category</th>
-                      <th>Confidence</th>
-                      <th>Latency</th>
-                      <th>Actions</th>
+                      <th scope="col">Entry</th>
+                      <th scope="col">Case</th>
+                      <th scope="col">Action</th>
+                      <th scope="col">Model output</th>
+                      <th scope="col">Open</th>
                     </tr>
                   </thead>
-                  <tbody id="overviewRecentTbody">
-                    <!-- Dynamic Rows -->
-                  </tbody>
+                  <tbody id="overviewRecentTbody"></tbody>
                 </table>
               </div>
             </div>
 
-            <!-- QUICK UPLOAD CTA CARD -->
             <div class="card overview-cta-card">
               <div class="cta-content">
-                <div class="cta-icon-glow">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#39D5FF" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
+                <div class="cta-icon-glow" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2EC4B6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 </div>
-                <h4 class="cta-title">Have your own MRI scan?</h4>
-                <p class="cta-desc">Upload custom axial, sagittal, or coronal slices (JPG / PNG) to generate interactive Grad-CAM heatmap explainability.</p>
-                <button class="btn btn-primary btn-block" data-tab="upload">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  <span>Upload Custom MRI Scan</span>
+                <h3 class="cta-title">Start with one case</h3>
+                <p class="cta-desc">Browse the library, pick a case, and walk through scan &rarr; annotation &rarr; model comparison.</p>
+                <button class="btn btn-primary btn-block" type="button" data-tab="library">
+                  <span>Browse Case Library</span>
                 </button>
               </div>
-            </div>
-          </div>
-
-          <!-- METRIC CARDS ROW (3 CLINICAL VALIDATION METRICS - AT BOTTOM) -->
-          <div class="metrics-grid metrics-bottom-row">
-            <!-- Card 1: Diagnostic Sensitivity -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-label">DIAGNOSTIC SENSITIVITY</span>
-                <span class="metric-icon-wrap cyan">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="3"/></svg>
-                </span>
-              </div>
-              <div class="metric-value mono">96.2%</div>
-              <div class="metric-footer">True positive rate for accurate tumor detection</div>
-            </div>
-
-            <!-- Card 2: Diagnostic Specificity -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-label">DIAGNOSTIC SPECIFICITY</span>
-                <span class="metric-icon-wrap green">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                </span>
-              </div>
-              <div class="metric-value mono">94.8%</div>
-              <div class="metric-footer">True negative rate for healthy parenchyma</div>
-            </div>
-
-            <!-- Card 3: AUC-ROC Score -->
-            <div class="metric-card">
-              <div class="metric-header">
-                <span class="metric-label">AUC-ROC SCORE</span>
-                <span class="metric-icon-wrap purple">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                </span>
-              </div>
-              <div class="metric-value mono">0.974</div>
-              <div class="metric-footer">Area under the receiver operating characteristic curve</div>
             </div>
           </div>
         </section>
 
 
         <!-- ============================================== -->
-        <!-- VIEW 2: NEW SCAN / UPLOAD & 5-SAMPLE TRAY      -->
+        <!-- TAB 2: CASE LIBRARY                            -->
         <!-- ============================================== -->
-        <section class="tab-view" id="view-upload">
+        <section class="tab-view" id="view-library" aria-labelledby="title-library">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Analyze New MRI Scan</h1>
-              <p class="view-subtitle">Upload your own brain MRI file (JPG/PNG), or select from the 5 clinical sample scans below for instant drag-and-drop evaluation.</p>
+              <h1 class="view-title" id="title-library" tabindex="-1">Case Library</h1>
+              <p class="view-subtitle">Public, de-identified example cases and their dataset labels. Select a case to open it in the Ultrasound Workspace.</p>
+            </div>
+          </div>
+
+          <div class="card" id="libraryNoteCard">
+            <div class="disclaimer-callout" id="libraryNote">
+              <strong>Case source:</strong> loading…
+            </div>
+          </div>
+
+          <div class="card overview-showcase-card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Example cases</h2>
+                <p class="card-desc">Each card shows the dataset's reference label &mdash; a label from the source dataset, not a diagnosis.</p>
+              </div>
+              <div class="badge-group">
+                <span class="badge badge-secondary mono" id="libraryCountBadge">0 cases</span>
+              </div>
+            </div>
+            <div class="sample-scans-showcase" id="libraryGrid">
+              <!-- Rendered by script.js -->
             </div>
           </div>
 
           <div class="upload-container">
-            <!-- Dropzone -->
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Or load your own image</h2>
+                <p class="card-desc">Use only de-identified images you are permitted to use. An uploaded image has no dataset annotation or reference label.</p>
+              </div>
+            </div>
+
             <div class="dropzone-card" id="dropZone">
-              <input type="file" id="filePickerInput" accept="image/png, image/jpeg, image/jpg" hidden>
-              
+              <input type="file" id="filePickerInput" accept="image/png, image/jpeg, image/jpg" hidden aria-label="Choose an ultrasound image file">
+
               <div class="dropzone-content" id="dropzonePrompt">
-                <div class="dropzone-icon-glow">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#39D5FF" stroke-width="1.8">
+                <div class="dropzone-icon-glow" aria-hidden="true">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2EC4B6" stroke-width="1.8">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
                 </div>
-                <h3 class="dropzone-title">Drop your brain MRI image here</h3>
-                <p class="dropzone-desc">Drag and drop a file from your computer, or drag any sample scan from below</p>
-                
+                <h3 class="dropzone-title">Drop an ultrasound image here</h3>
+                <p class="dropzone-desc">Drag a file from your computer, or use the button to browse.</p>
+
                 <button class="btn btn-secondary" id="browseFileBtn" type="button">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <span>Browse Local Computer</span>
+                  <span>Browse local files</span>
                 </button>
 
                 <div class="dropzone-formats">
                   <span class="format-pill">PNG</span>
                   <span class="format-pill">JPG</span>
                   <span class="format-pill">JPEG</span>
-                  <span class="format-hint mono">&middot; Max 20MB &middot; Automatically Normalized to 224&times;224 for PyTorch</span>
+                  <span class="format-hint mono">&middot; Educational use &middot; Images stay in your browser unless you run the model</span>
                 </div>
               </div>
 
-              <!-- Selected File Preview Stage -->
               <div class="dropzone-preview-stage" id="dropzonePreviewStage" hidden>
                 <div class="preview-stage-left">
                   <div class="stage-img-wrap">
-                    <img id="stagePreviewImage" src="" alt="MRI Preview">
-                    <div class="reticle tl"></div>
-                    <div class="reticle tr"></div>
-                    <div class="reticle bl"></div>
-                    <div class="reticle br"></div>
+                    <img id="stagePreviewImage" src="" alt="Preview of the selected ultrasound image">
                   </div>
                 </div>
                 <div class="preview-stage-right">
                   <div class="stage-info-header">
-                    <h4 class="stage-filename" id="stageFilename">scan-slice-axial-01.png</h4>
-                    <span class="badge badge-success" id="stageStatusBadge">Ready for Analysis</span>
+                    <h4 class="stage-filename" id="stageFilename">image.png</h4>
+                    <span class="badge badge-secondary">No annotation &middot; no reference label</span>
                   </div>
 
                   <div class="stage-meta-grid">
                     <div class="stage-meta-item">
                       <span class="stage-meta-label">DIMENSIONS</span>
-                      <span class="stage-meta-val mono" id="stageDimensions">512 &times; 512 px</span>
+                      <span class="stage-meta-val mono" id="stageDimensions">—</span>
                     </div>
                     <div class="stage-meta-item">
                       <span class="stage-meta-label">FILE SIZE</span>
-                      <span class="stage-meta-val mono" id="stageFileSize">284 KB</span>
-                    </div>
-                    <div class="stage-meta-item">
-                      <span class="stage-meta-label">COLOR SPACE</span>
-                      <span class="stage-meta-val mono">RGB / Grayscale</span>
-                    </div>
-                    <div class="stage-meta-item">
-                      <span class="stage-meta-label">TARGET CNN INPUT</span>
-                      <span class="stage-meta-val mono">224 &times; 224 Tensor</span>
+                      <span class="stage-meta-val mono" id="stageFileSize">—</span>
                     </div>
                   </div>
 
                   <div class="stage-actions">
-                    <button class="btn btn-secondary" id="changeSelectedFileBtn" type="button">Change Image</button>
-                    <button class="btn btn-primary btn-glow" id="startInferenceBtn" type="button">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      <span>Run AI Analysis</span>
+                    <button class="btn btn-secondary" id="changeSelectedFileBtn" type="button">Choose a different image</button>
+                    <button class="btn btn-primary btn-glow" id="openUploadBtn" type="button">
+                      <span>Open in Workspace</span>
                     </button>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- ============================================== -->
-            <!-- 5 PRE-LOADED CLINICAL SCAN SAMPLES TRAY        -->
-            <!-- ============================================== -->
-            <div class="card preset-samples-card">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">5 Pre-Loaded Brain Tumor MRI Samples (No file needed)</h3>
-                  <p class="card-sub-mono mono">Click any scan to analyze instantly, or drag it into the dropzone above</p>
-                </div>
-                <span class="badge badge-cyan">Drag &amp; Drop Enabled</span>
-              </div>
-
-              <div class="preset-samples-grid">
-                
-                <!-- Sample 1: Glioma -->
-                <div class="preset-sample-box" data-sample="glioma" draggable="true" title="Drag into dropzone or click to test">
-                  <div class="preset-sample-preview-wrap">
-                    <img class="preset-sample-img" id="presetImgGlioma1" src="" alt="Glioma">
-                    <span class="preset-badge badge-danger">Glioma</span>
-                    <div class="drag-handle-hint">&equiv; Drag</div>
-                  </div>
-                  <div class="preset-sample-details">
-                    <h5 class="preset-title">01. Glioma Case #204</h5>
-                    <span class="preset-sub mono">Axial T1 &middot; Frontal Lobe</span>
-                    <button class="btn-sample-run" data-sample="glioma">⚡ Test Scan</button>
-                  </div>
-                </div>
-
-                <!-- Sample 2: Meningioma -->
-                <div class="preset-sample-box" data-sample="meningioma" draggable="true" title="Drag into dropzone or click to test">
-                  <div class="preset-sample-preview-wrap">
-                    <img class="preset-sample-img" id="presetImgMeningioma" src="" alt="Meningioma">
-                    <span class="preset-badge badge-warning">Meningioma</span>
-                    <div class="drag-handle-hint">&equiv; Drag</div>
-                  </div>
-                  <div class="preset-sample-details">
-                    <h5 class="preset-title">02. Meningioma #118</h5>
-                    <span class="preset-sub mono">Extra-Axial Dural Mass</span>
-                    <button class="btn-sample-run" data-sample="meningioma">⚡ Test Scan</button>
-                  </div>
-                </div>
-
-                <!-- Sample 3: Pituitary -->
-                <div class="preset-sample-box" data-sample="pituitary" draggable="true" title="Drag into dropzone or click to test">
-                  <div class="preset-sample-preview-wrap">
-                    <img class="preset-sample-img" id="presetImgPituitary" src="" alt="Pituitary">
-                    <span class="preset-badge badge-purple">Pituitary</span>
-                    <div class="drag-handle-hint">&equiv; Drag</div>
-                  </div>
-                  <div class="preset-sample-details">
-                    <h5 class="preset-title">03. Pituitary #092</h5>
-                    <span class="preset-sub mono">Sellar Region Adenoma</span>
-                    <button class="btn-sample-run" data-sample="pituitary">⚡ Test Scan</button>
-                  </div>
-                </div>
-
-                <!-- Sample 4: No Tumor Control -->
-                <div class="preset-sample-box" data-sample="notumor" draggable="true" title="Drag into dropzone or click to test">
-                  <div class="preset-sample-preview-wrap">
-                    <img class="preset-sample-img" id="presetImgNoTumor" src="" alt="No Tumor">
-                    <span class="preset-badge badge-success">No Tumor</span>
-                    <div class="drag-handle-hint">&equiv; Drag</div>
-                  </div>
-                  <div class="preset-sample-details">
-                    <h5 class="preset-title">04. Normal Brain #044</h5>
-                    <span class="preset-sub mono">Healthy Control Slice</span>
-                    <button class="btn-sample-run" data-sample="notumor">⚡ Test Scan</button>
-                  </div>
-                </div>
-
-                <!-- Sample 5: Astrocytoma T2 -->
-                <div class="preset-sample-box" data-sample="glioma2" draggable="true" title="Drag into dropzone or click to test">
-                  <div class="preset-sample-preview-wrap">
-                    <img class="preset-sample-img" id="presetImgGlioma2" src="" alt="Astrocytoma">
-                    <span class="preset-badge badge-danger">Glioma (T2)</span>
-                    <div class="drag-handle-hint">&equiv; Drag</div>
-                  </div>
-                  <div class="preset-sample-details">
-                    <h5 class="preset-title">05. Astrocytoma #315</h5>
-                    <span class="preset-sub mono">Temporal Hyperintensity</span>
-                    <button class="btn-sample-run" data-sample="glioma2">⚡ Test Scan</button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <!-- Upload Guidelines -->
-            <div class="upload-guidelines-grid">
-              <div class="guide-card">
-                <div class="guide-num">01</div>
-                <h4>Drag &amp; Drop or Upload</h4>
-                <p>Upload a custom JPG/PNG slice from your system or drag any of the 5 pre-loaded clinical scans directly into the dropzone.</p>
-              </div>
-              <div class="guide-card">
-                <div class="guide-num">02</div>
-                <h4>Pre-Processing Pipeline</h4>
-                <p>Input images are automatically normalized using PyTorch ImageNet mean &amp; std distribution parameters.</p>
-              </div>
-              <div class="guide-card">
-                <div class="guide-num">03</div>
-                <h4>Grad-CAM Explainability</h4>
-                <p>The system visualizes salient convolutional activation maps (layer <code>features[9]</code>) in real time.</p>
               </div>
             </div>
           </div>
@@ -619,248 +420,250 @@
 
 
         <!-- ============================================== -->
-        <!-- VIEW 3: MAIN MRI WORKSPACE (CORE WORKSTATION)  -->
+        <!-- TAB 3: ULTRASOUND WORKSPACE                    -->
         <!-- ============================================== -->
-        <section class="tab-view" id="view-workspace">
+        <section class="tab-view" id="view-workspace" aria-labelledby="title-workspace">
+          <h1 class="sr-only" id="title-workspace" tabindex="-1">Ultrasound Workspace</h1>
           <div class="workspace-layout">
 
-            <!-- LEFT PANEL: CURRENT STUDY METADATA -->
-            <aside class="panel workspace-left-panel">
+            <!-- LEFT PANEL: CASE DETAILS & JOURNEY -->
+            <aside class="panel workspace-left-panel" aria-label="Case details">
               <div class="panel-header">
-                <div class="panel-tag"><span>01</span> CURRENT STUDY</div>
-                <button class="btn-icon" id="panelChangeScanBtn" title="Upload or Change Scan">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="panel-tag"><span>01</span> CURRENT CASE</div>
+                <button class="btn-icon" id="panelChangeCaseBtn" type="button" title="Choose a different case" aria-label="Choose a different case">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 </button>
               </div>
 
               <div class="panel-content">
                 <div class="study-card">
                   <div class="study-thumb-box">
-                    <img id="studyThumbnail" src="" alt="Thumbnail">
-                    <span class="study-badge-floating mono">AXIAL</span>
+                    <img id="caseThumbnail" src="" alt="">
+                    <span class="study-badge-floating mono" id="caseSourceBadge">CASE</span>
                   </div>
                   <div class="study-details">
-                    <div class="study-id-label">STUDY IDENTIFIER</div>
-                    <div class="study-id-val mono" id="studyIdText">MRI-2026-001</div>
+                    <div class="study-id-label">CASE</div>
+                    <div class="study-id-val mono" id="caseIdText">—</div>
                   </div>
                 </div>
 
                 <div class="meta-list">
                   <div class="meta-row">
+                    <span class="meta-k">Title</span>
+                    <span class="meta-v" id="caseTitleText">No case selected</span>
+                  </div>
+                  <div class="meta-row">
                     <span class="meta-k">Modality</span>
-                    <span class="meta-v mono">MRI (Brain T1/T2)</span>
+                    <span class="meta-v mono">Breast ultrasound (B-mode)</span>
                   </div>
                   <div class="meta-row">
-                    <span class="meta-k">Study Type</span>
-                    <span class="meta-v">Neuro-Oncology</span>
+                    <span class="meta-k">Source</span>
+                    <span class="meta-v" id="caseSourceText">—</span>
                   </div>
                   <div class="meta-row">
-                    <span class="meta-k">Slices</span>
-                    <span class="meta-v mono" id="studySliceCount">04 Available</span>
+                    <span class="meta-k">Dataset annotation</span>
+                    <span class="meta-v" id="caseAnnotationText">—</span>
                   </div>
                   <div class="meta-row">
-                    <span class="meta-k">Inference Status</span>
-                    <span class="meta-v">
-                      <span class="status-pill status-ready" id="studyStatusPill">Analysis Complete</span>
-                    </span>
+                    <span class="meta-k">Reference label</span>
+                    <span class="meta-v" id="caseRefLabelText">—</span>
                   </div>
                   <div class="meta-row">
-                    <span class="meta-k">File Source</span>
-                    <span class="meta-v mono text-truncate" id="studyFileName">sample_glioma.png</span>
+                    <span class="meta-k">File</span>
+                    <span class="meta-v mono text-truncate" id="caseFileName">—</span>
                   </div>
                 </div>
 
-                <!-- Pipeline Timeline Stage Visualizer -->
+                <p class="card-desc" id="caseTeachingPoint"></p>
+
                 <div class="timeline-box">
-                  <div class="timeline-title">INFERENCE PIPELINE</div>
-                  <div class="timeline-steps">
-                    <div class="timeline-step done" id="stepUpload">
-                      <span class="step-icon">&check;</span>
-                      <span class="step-label">MRI Loaded</span>
+                  <div class="timeline-title">YOUR PROGRESS</div>
+                  <div class="timeline-steps" id="journeySteps">
+                    <div class="timeline-step" id="jStep1">
+                      <span class="step-icon" aria-hidden="true">&bull;</span>
+                      <span class="step-label">1. Case selected</span>
                     </div>
-                    <div class="timeline-step done" id="stepPreproc">
-                      <span class="step-icon">&check;</span>
-                      <span class="step-label">224&times;224 Preprocessed</span>
+                    <div class="timeline-step" id="jStep2">
+                      <span class="step-icon" aria-hidden="true">&bull;</span>
+                      <span class="step-label">2. Inspect the scan</span>
                     </div>
-                    <div class="timeline-step done" id="stepInference">
-                      <span class="step-icon">&check;</span>
-                      <span class="step-label">Model Inference</span>
+                    <div class="timeline-step" id="jStep3">
+                      <span class="step-icon" aria-hidden="true">&bull;</span>
+                      <span class="step-label">3. Compare expert annotation</span>
                     </div>
-                    <div class="timeline-step done" id="stepGradcam">
-                      <span class="step-icon">&check;</span>
-                      <span class="step-label">Grad-CAM Explainability</span>
+                    <div class="timeline-step" id="jStep4">
+                      <span class="step-icon" aria-hidden="true">&bull;</span>
+                      <span class="step-label">4. Run / review model</span>
+                    </div>
+                    <div class="timeline-step" id="jStep5">
+                      <span class="step-icon" aria-hidden="true">&bull;</span>
+                      <span class="step-label">5. Compare label vs. output</span>
                     </div>
                   </div>
                 </div>
 
                 <div class="panel-bottom-actions">
-                  <button class="btn btn-secondary btn-block" id="workspaceNewScanBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    <span>Upload or Pick Sample</span>
+                  <button class="btn btn-secondary btn-block" id="workspaceNewCaseBtn" type="button">
+                    <span>Choose another case</span>
                   </button>
                 </div>
               </div>
             </aside>
 
 
-            <!-- CENTER PANEL: HIGH-PRECISION RADIOLOGY VIEWER -->
-            <section class="panel workspace-center-panel">
+            <!-- CENTER PANEL: VIEWER -->
+            <section class="panel workspace-center-panel" aria-label="Ultrasound viewer">
               <div class="panel-header viewer-toolbar">
-                <div class="panel-tag"><span>02</span> CLINICAL MRI VIEWER</div>
+                <div class="panel-tag"><span>02</span> ULTRASOUND VIEWER</div>
 
-                <div class="viewer-controls">
-                  <button class="btn-ctrl" id="zoomInBtn" title="Zoom In (+)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <div class="viewer-controls" role="toolbar" aria-label="Viewer controls">
+                  <button class="btn-ctrl" id="zoomInBtn" type="button" title="Zoom in (+)" aria-label="Zoom in">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                   </button>
-                  <button class="btn-ctrl" id="zoomOutBtn" title="Zoom Out (-)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                  <button class="btn-ctrl" id="zoomOutBtn" type="button" title="Zoom out (-)" aria-label="Zoom out">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                   </button>
-                  <button class="btn-ctrl" id="zoomFitBtn" title="Fit to View">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                  <button class="btn-ctrl" id="zoomFitBtn" type="button" title="Fit to view (0)" aria-label="Fit to view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
                   </button>
-                  <button class="btn-ctrl" id="resetViewerBtn" title="Reset View">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <button class="btn-ctrl" id="resetViewerBtn" type="button" title="Reset view" aria-label="Reset view">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   </button>
-                  <button class="btn-ctrl" id="fullscreenViewerBtn" title="Fullscreen">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                  <button class="btn-ctrl" id="fullscreenViewerBtn" type="button" title="Fullscreen" aria-label="Toggle fullscreen">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                   </button>
                 </div>
               </div>
 
-              <!-- MRI Screen Canvas Container -->
               <div class="mri-viewport" id="mriViewport">
-                <div class="viewer-grid-overlay"></div>
-                <div class="viewer-ruler top-ruler"></div>
-                <div class="viewer-ruler side-ruler"></div>
+                <div class="viewer-grid-overlay" aria-hidden="true"></div>
 
                 <div class="mri-canvas-stage" id="mriCanvasStage">
-                  <!-- Empty Prompt when no scan -->
                   <div class="viewer-empty-state" id="viewerEmptyState">
-                    <svg width="54" height="54" viewBox="0 0 64 64" fill="none">
-                      <circle cx="32" cy="32" r="28" stroke="#243447" stroke-width="2" stroke-dasharray="4 4"/>
-                      <path d="M32 10C20 10 10 20 10 32s10 22 22 22 22-10 22-22-10-22-22-22Z" stroke="#39D5FF" stroke-width="1.6" opacity="0.6"/>
-                      <path d="M32 18c-5 3-9 9-9 14s4 11 9 14M32 18c5 3 9 9 9 14s-4 11-9 14M16 28h32M16 36h32" stroke="#7C6CFF" stroke-width="1.2" opacity="0.4"/>
+                    <svg width="54" height="54" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                      <path d="M8 48a24 24 0 0 1 48 0" stroke="#2EC4B6" stroke-width="2" opacity="0.7"/>
+                      <path d="M18 48a14 14 0 0 1 28 0" stroke="#FF7F6E" stroke-width="2" opacity="0.7"/>
+                      <circle cx="32" cy="48" r="3" fill="#FF7F6E"/>
                     </svg>
-                    <p class="empty-title">No MRI Slice Loaded</p>
-                    <p class="empty-sub">Select a sample case below or upload a new scan to begin analysis</p>
-                    <button class="btn btn-primary-sm" data-tab="upload">+ Pick a Sample / Upload</button>
+                    <p class="empty-title">No case open</p>
+                    <p class="empty-sub">Choose a case from the library to begin.</p>
+                    <button class="btn btn-primary-sm" type="button" data-tab="library">Choose a case</button>
                   </div>
 
-                  <!-- Active MRI Image -->
-                  <img id="mriViewerImage" class="mri-active-image" alt="Active MRI Scan">
+                  <img id="viewerImage" class="mri-active-image" alt="Breast ultrasound image" style="display:none;">
+                  <img id="annotationLayer" class="mri-active-heatmap" alt="Dataset annotation overlay" style="display:none;">
+                  <img id="modelMaskLayer" class="mri-active-heatmap" alt="Experimental model mask overlay" style="display:none;">
 
-                  <!-- Heatmap Overlay Layer in Viewer -->
-                  <img id="mriViewerHeatmap" class="mri-active-heatmap" alt="Grad-CAM Overlay">
-
-                  <!-- Dynamic Scanline Animation -->
-                  <div class="laser-scanline" id="laserScanline"></div>
-
-                  <!-- Precision Reticles -->
-                  <div class="reticle tl"></div>
-                  <div class="reticle tr"></div>
-                  <div class="reticle bl"></div>
-                  <div class="reticle br"></div>
-
-                  <div class="crosshair-center"></div>
-
-                  <!-- Telemetry HUD Overlay -->
                   <div class="hud-top-left mono" id="hudZoomText">ZOOM: 100%</div>
-                  <div class="hud-top-right mono">MODALITY: MRI-T1</div>
-                  <div class="hud-bottom-left mono" id="hudDimText">224 &times; 224 px</div>
-                  <div class="hud-bottom-right mono">WINDOW: W350 L50</div>
+                  <div class="hud-top-right mono">MODALITY: US (B-MODE)</div>
+                  <div class="hud-bottom-left mono" id="hudDimText">—</div>
+                  <div class="hud-bottom-right mono" id="hudSourceText">—</div>
                 </div>
               </div>
 
-              <!-- SLICE NAVIGATION & ADJUSTMENT DOCK -->
+              <!-- Layers & adjustments dock -->
               <div class="viewer-footer-dock">
-                <div class="slice-navigator">
-                  <button class="btn-slice-nav" id="prevSliceBtn" title="Previous Slice">&larr; Prev</button>
-                  <span class="slice-counter mono" id="sliceCounterText">SLICE 01 / 04</span>
-                  <button class="btn-slice-nav" id="nextSliceBtn" title="Next Slice">Next &rarr;</button>
-                </div>
-
-                <div class="slice-slider-wrap">
-                  <input type="range" id="sliceSlider" min="1" max="4" value="1" class="custom-range">
+                <div class="slice-navigator" role="group" aria-label="Overlay layers">
+                  <button class="filter-pill" id="toggleAnnotationBtn" type="button" aria-pressed="false" title="Toggle dataset annotation (A)">
+                    Dataset annotation
+                  </button>
+                  <button class="filter-pill" id="toggleModelBtn" type="button" aria-pressed="false" title="Toggle experimental model mask (M)">
+                    Model mask
+                  </button>
                 </div>
 
                 <div class="viewer-adjusters">
-                  <div class="adjuster-item" title="Brightness adjustment">
-                    <span class="adjuster-label mono">BRT</span>
-                    <input type="range" id="brightnessSlider" min="50" max="150" value="100" class="mini-range">
+                  <div class="adjuster-item">
+                    <label class="adjuster-label mono" for="brightnessSlider">BRT</label>
+                    <input type="range" id="brightnessSlider" min="50" max="150" value="100" class="mini-range" aria-label="Brightness">
                   </div>
-                  <div class="adjuster-item" title="Contrast adjustment">
-                    <span class="adjuster-label mono">CTR</span>
-                    <input type="range" id="contrastSlider" min="50" max="150" value="100" class="mini-range">
+                  <div class="adjuster-item">
+                    <label class="adjuster-label mono" for="contrastSlider">CTR</label>
+                    <input type="range" id="contrastSlider" min="50" max="150" value="100" class="mini-range" aria-label="Contrast">
                   </div>
-                  <div class="adjuster-item" title="Grad-CAM overlay opacity in viewer">
-                    <span class="adjuster-label mono">CAM</span>
-                    <input type="range" id="camOpacitySlider" min="0" max="100" value="0" class="mini-range">
+                  <div class="adjuster-item">
+                    <label class="adjuster-label mono" for="annotationOpacitySlider">ANN</label>
+                    <input type="range" id="annotationOpacitySlider" min="10" max="100" value="85" class="mini-range" aria-label="Dataset annotation opacity">
+                  </div>
+                  <div class="adjuster-item">
+                    <label class="adjuster-label mono" for="modelOpacitySlider">MSK</label>
+                    <input type="range" id="modelOpacitySlider" min="10" max="100" value="70" class="mini-range" aria-label="Model mask opacity">
+                  </div>
+                </div>
+              </div>
+
+              <div class="classes-breakdown-box" style="padding:10px 16px;">
+                <div class="class-chips-list">
+                  <div class="class-chip">
+                    <span class="chip-dot" style="background:#FF7F6E;"></span>
+                    <strong>Dataset annotation</strong>
+                    <span class="mono">reference outline</span>
+                  </div>
+                  <div class="class-chip">
+                    <span class="chip-dot" style="background:#2EC4B6;"></span>
+                    <strong>Model mask</strong>
+                    <span class="mono">experimental output</span>
+                  </div>
+                  <div class="class-chip">
+                    <span class="mono">Keys: + / - zoom &middot; 0 fit &middot; A annotation &middot; M model mask</span>
                   </div>
                 </div>
               </div>
             </section>
 
 
-            <!-- RIGHT PANEL: AI ANALYSIS READOUT -->
-            <aside class="panel workspace-right-panel">
+            <!-- RIGHT PANEL: MODEL STATUS & QUICK OUTPUT -->
+            <aside class="panel workspace-right-panel" aria-label="Model output">
               <div class="panel-header">
-                <div class="panel-tag"><span>03</span> AI ANALYSIS</div>
+                <div class="panel-tag"><span>03</span> MODEL OUTPUT</div>
                 <span class="status-indicator-chip" id="analysisStatusChip">
-                  <span class="dot"></span>
-                  <span id="analysisStatusLabel">Complete</span>
+                  <span class="dot" aria-hidden="true"></span>
+                  <span id="analysisStatusLabel">Not run</span>
                 </span>
               </div>
 
               <div class="panel-content">
-                <!-- PREDICTION HIGHLIGHT CARD -->
-                <div class="verdict-display-card" id="verdictDisplayCard">
-                  <div class="verdict-eyebrow">MODEL PREDICTION</div>
-                  <div class="verdict-title-row">
-                    <h2 class="verdict-class-name" id="verdictClassName">Glioma</h2>
-                    <span class="verdict-category-badge badge-danger" id="verdictCategoryBadge">Tumor Indicated</span>
-                  </div>
+                <div class="disclaimer-callout" id="wsModeNotice">
+                  <strong>Demo-only:</strong> checking model status…
+                </div>
 
+                <div class="verdict-display-card" id="wsVerdictCard" hidden>
+                  <div class="verdict-eyebrow">MODEL OUTPUT (EXPERIMENTAL)</div>
+                  <div class="verdict-title-row">
+                    <h2 class="verdict-class-name" id="wsVerdictName">—</h2>
+                    <span class="verdict-category-badge badge-cyan" id="wsVerdictBadge">Trained checkpoint</span>
+                  </div>
                   <div class="confidence-gauge-container">
                     <div class="gauge-header">
-                      <span class="gauge-label">CLASSIFICATION CONFIDENCE</span>
-                      <span class="gauge-value mono" id="verdictConfidenceVal">94.7%</span>
+                      <span class="gauge-label">MODEL PROBABILITY</span>
+                      <span class="gauge-value mono" id="wsVerdictConf">—</span>
                     </div>
                     <div class="gauge-track">
-                      <div class="gauge-fill" id="verdictConfidenceFill" style="width: 94.7%"></div>
+                      <div class="gauge-fill" id="wsVerdictFill" style="width:0%"></div>
                     </div>
                   </div>
                 </div>
 
-                <!-- ALL 4 CLASSES PROBABILITY BREAKDOWN -->
-                <div class="probabilities-section">
-                  <div class="section-title-sm">CLASS PROBABILITIES (4 CLASSES)</div>
-                  
-                  <div class="prob-bars-list" id="probBarsList">
-                    <!-- Dynamic Prob Rows -->
+                <div class="meta-list">
+                  <div class="meta-row">
+                    <span class="meta-k">Dataset reference label</span>
+                    <span class="meta-v" id="wsRefLabel">—</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">Model output</span>
+                    <span class="meta-v" id="wsModelOutput">Not run</span>
                   </div>
                 </div>
 
-                <!-- QUICK EXPLAINABILITY PEEK -->
-                <div class="quick-cam-peek">
-                  <div class="peek-header">
-                    <span class="section-title-sm">GRAD-CAM ACTIVATION MAP</span>
-                    <button class="btn-link" data-tab="explainability">Full 3-Way &rarr;</button>
-                  </div>
-                  <div class="peek-img-box">
-                    <img id="quickCamHeatmap" src="" alt="Grad-CAM Map">
-                    <span class="peek-layer-badge mono">features.conv4</span>
-                  </div>
-                </div>
-
-                <!-- ACTIONS -->
                 <div class="workspace-action-group">
-                  <button class="btn btn-primary btn-block" data-tab="explainability">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M20 12v8H4v-8"/><path d="m4 4 16 16"/><path d="M4 12V4h16v8"/></svg>
-                    <span>View Explainability</span>
+                  <button class="btn btn-primary btn-block" id="runModelBtn" type="button">
+                    <span>Run experimental model</span>
                   </button>
-                  <button class="btn btn-secondary btn-block" id="generateReportQuickBtn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <span>Generate Research Report</span>
+                  <button class="btn btn-secondary btn-block" id="goClassificationBtn" type="button">
+                    <span>See label vs. output</span>
+                  </button>
+                  <button class="btn btn-secondary btn-block" id="goExplainBtn" type="button">
+                    <span>What does the mask mean?</span>
                   </button>
                 </div>
               </div>
@@ -870,114 +673,216 @@
 
 
         <!-- ============================================== -->
-        <!-- VIEW 4: EXPLAINABLE AI / GRAD-CAM (3-COLUMN)   -->
+        <!-- TAB 4: CLASSIFICATION                          -->
         <!-- ============================================== -->
-        <section class="tab-view" id="view-explainability">
+        <section class="tab-view" id="view-classification" aria-labelledby="title-classification">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Model Explainability</h1>
-              <p class="view-subtitle">Visual representation of salient feature maps and convolutional activation zones contributing to the model prediction.</p>
+              <h1 class="view-title" id="title-classification" tabindex="-1">Classification: label vs. model output</h1>
+              <p class="view-subtitle">Benign / malignant output from the experimental model, shown separately from the dataset's reference label. Neither is a diagnosis.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-secondary" data-tab="workspace">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              <button class="btn btn-secondary" type="button" data-tab="workspace">
+                <span>Back to Workspace</span>
+              </button>
+              <button class="btn btn-primary" id="clsRunBtn" type="button">
+                <span>Run experimental model</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="model-lab-grid">
+            <!-- Dataset reference label -->
+            <div class="card model-specs-card">
+              <div class="card-header">
+                <h2 class="card-title">Dataset reference label</h2>
+                <span class="badge badge-secondary">From the dataset</span>
+              </div>
+              <div class="spec-table-list">
+                <div class="spec-item">
+                  <span class="spec-k">Case</span>
+                  <span class="spec-v" id="clsCaseTitle">No case selected</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-k">Reference label</span>
+                  <span class="spec-v mono" id="clsRefLabel">—</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-k">What this is</span>
+                  <span class="spec-v" id="clsRefNote">A label supplied by the source dataset for this case. It is not a diagnosis for any person.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Model output -->
+            <div class="card model-benchmarks-card">
+              <div class="card-header">
+                <h2 class="card-title">Model output</h2>
+                <span class="badge badge-cyan" id="clsModeBadge">Not run</span>
+              </div>
+
+              <div class="disclaimer-callout" id="clsNotice">
+                <strong>No model output:</strong> run the experimental model on the current case.
+              </div>
+
+              <div class="verdict-display-card" id="clsVerdictCard" hidden>
+                <div class="verdict-eyebrow">MODEL OUTPUT (EXPERIMENTAL)</div>
+                <div class="verdict-title-row">
+                  <h2 class="verdict-class-name" id="verdictClassName">—</h2>
+                  <span class="verdict-category-badge badge-cyan" id="verdictCategoryBadge">Trained checkpoint</span>
+                </div>
+                <div class="confidence-gauge-container">
+                  <div class="gauge-header">
+                    <span class="gauge-label">MODEL PROBABILITY</span>
+                    <span class="gauge-value mono" id="verdictConfidenceVal">—</span>
+                  </div>
+                  <div class="gauge-track">
+                    <div class="gauge-fill" id="verdictConfidenceFill" style="width:0%"></div>
+                  </div>
+                </div>
+                <p class="card-desc" id="uncertaintyNote"></p>
+              </div>
+
+              <div class="probabilities-section" id="clsProbSection" hidden>
+                <div class="section-title-sm">CLASS PROBABILITIES</div>
+                <div class="prob-bars-list" id="probBarsList"></div>
+              </div>
+
+              <div class="meta-list">
+                <div class="meta-row">
+                  <span class="meta-k">Inference time</span>
+                  <span class="meta-v mono" id="clsLatency">—</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-k">Mask returned</span>
+                  <span class="meta-v" id="clsMaskState">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Held-out evaluation (reported by the model API)</h2>
+                <p class="card-desc">Metrics are measured on held-out cases, split by patient/case ID. They appear here only if the API reports them.</p>
+              </div>
+              <span class="badge badge-secondary" id="clsMetricsBadge">Not reported</span>
+            </div>
+            <div class="benchmark-stats-grid" id="clsMetricsGrid">
+              <div class="bench-stat-box">
+                <span class="bench-label">METRICS</span>
+                <span class="bench-val mono">&mdash;</span>
+                <span class="bench-sub">Not reported yet</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- TAB 5: EXPLAINABILITY                          -->
+        <!-- ============================================== -->
+        <section class="tab-view" id="view-explainability" aria-labelledby="title-explainability">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" id="title-explainability" tabindex="-1">Explainability: what the mask shows</h1>
+              <p class="view-subtitle">Compare the original scan with the expert annotation and the experimental model mask &mdash; and learn what each can and cannot establish.</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn btn-secondary" type="button" data-tab="workspace">
                 <span>Back to Workspace</span>
               </button>
             </div>
           </div>
 
-          <!-- 3-Column Comparative Explainability View -->
           <div class="explainability-tri-grid">
-            
-            <!-- Column 1: Original MRI -->
+            <!-- 01 Original -->
             <div class="card explain-card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">01. Original MRI</h3>
-                  <span class="card-sub-mono mono">Axial T1/T2 Input Slice (224&times;224)</span>
+                  <h2 class="card-title">01. Original scan</h2>
+                  <span class="card-sub-mono mono">No overlays</span>
                 </div>
-                <span class="badge badge-secondary">Raw Input</span>
+                <span class="badge badge-secondary">Raw image</span>
               </div>
               <div class="explain-stage-wrap">
-                <img id="explainOriginalImg" src="" alt="Original MRI">
-                <div class="reticle tl"></div>
-                <div class="reticle tr"></div>
-                <div class="reticle bl"></div>
-                <div class="reticle br"></div>
+                <img id="exOriginalImg" src="" alt="Original ultrasound scan without overlays">
               </div>
               <div class="explain-meta-footer">
-                <span class="mono">Tensor: [1, 3, 224, 224]</span>
-                <span class="mono">Norm: ImageNet</span>
+                <span class="mono" id="exOriginalMeta">—</span>
               </div>
             </div>
 
-            <!-- Column 2: Grad-CAM Heatmap -->
+            <!-- 02 Dataset annotation -->
             <div class="card explain-card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">02. Grad-CAM Heatmap</h3>
-                  <span class="card-sub-mono mono">Layer: model.features[9] (256-ch)</span>
+                  <h2 class="card-title">02. Dataset annotation</h2>
+                  <span class="card-sub-mono mono">Reference outline from the dataset</span>
                 </div>
-                <span class="badge badge-cyan">Feature Salience</span>
-              </div>
-              <div class="explain-stage-wrap heatmap-stage">
-                <img id="explainHeatmapImg" src="" alt="Grad-CAM Heatmap">
-                <div class="reticle tl"></div>
-                <div class="reticle tr"></div>
-                <div class="reticle bl"></div>
-                <div class="reticle br"></div>
-                <div class="heatmap-legend">
-                  <span class="legend-low mono">Low</span>
-                  <div class="legend-bar"></div>
-                  <span class="legend-high mono">Peak Activation</span>
-                </div>
-              </div>
-              <div class="explain-meta-footer">
-                <span class="mono">Gradient-Weighted Class CAM</span>
-                <span class="mono">ReLU Rectified</span>
-              </div>
-            </div>
-
-            <!-- Column 3: Fused Overlay -->
-            <div class="card explain-card">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">03. Fused Overlay</h3>
-                  <span class="card-sub-mono mono">Blended Anatomical & AI Focus</span>
-                </div>
-                <span class="badge badge-purple">Integrated View</span>
+                <span class="badge badge-warning">Dataset annotation</span>
               </div>
               <div class="explain-stage-wrap overlay-stage">
-                <img id="explainOverlayBaseImg" class="overlay-base-img" src="" alt="Base MRI">
-                <img id="explainOverlayHeatmapImg" class="overlay-cam-img" src="" alt="Heatmap Overlay">
-                <div class="reticle tl"></div>
-                <div class="reticle tr"></div>
-                <div class="reticle bl"></div>
-                <div class="reticle br"></div>
+                <img id="exAnnBaseImg" class="overlay-base-img" src="" alt="Scan under the dataset annotation">
+                <img id="exAnnOverlayImg" class="overlay-cam-img" src="" alt="Dataset annotation outline" style="opacity:0.9;">
               </div>
               <div class="explain-meta-footer">
+                <span class="mono" id="exAnnMeta">—</span>
+              </div>
+            </div>
+
+            <!-- 03 Model mask -->
+            <div class="card explain-card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">03. Model mask</h2>
+                  <span class="card-sub-mono mono">Experimental model output</span>
+                </div>
+                <span class="badge badge-cyan">Model output</span>
+              </div>
+              <div class="explain-stage-wrap overlay-stage">
+                <img id="exModelBaseImg" class="overlay-base-img" src="" alt="Scan under the model mask">
+                <img id="exModelOverlayImg" class="overlay-cam-img" src="" alt="Experimental model mask">
+              </div>
+              <p class="empty-sub" id="exModelEmpty" style="padding:8px 14px;">No model mask yet.</p>
+              <div class="explain-meta-footer">
                 <div class="explain-opacity-ctrl">
-                  <span class="mono">Blend Opacity:</span>
-                  <input type="range" id="explainOpacitySlider" min="10" max="95" value="65" class="mini-range">
-                  <span class="mono" id="explainOpacityVal">65%</span>
+                  <label class="mono" for="exModelOpacitySlider">Opacity:</label>
+                  <input type="range" id="exModelOpacitySlider" min="10" max="95" value="65" class="mini-range">
+                  <span class="mono" id="exModelOpacityVal">65%</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Technical Interpretability Guide -->
           <div class="card explain-guide-card">
             <div class="card-header">
-              <h3 class="card-title">Interpretation Protocol & Neural Feature Localization</h3>
+              <h2 class="card-title">How to read these layers</h2>
             </div>
             <div class="explain-guide-grid">
               <div class="guide-item">
-                <div class="guide-lead-title">What is Grad-CAM?</div>
-                <p>Gradient-weighted Class Activation Mapping computes the gradients of the predicted class score with respect to the final convolutional feature maps (256 filters &times; 14 &times; 14 resolution). High activation values denote anatomical regions that most heavily influenced the neural network's classification.</p>
+                <div class="guide-lead-title">What a mask shows</div>
+                <p>A mask outlines the pixels that someone (the annotation) or something (the model) marked as the lesion. It helps you see where to look and how the margins were drawn.</p>
               </div>
               <div class="guide-item">
-                <div class="guide-lead-title">Research Guidance</div>
-                <p>Verify that peak activation maps correspond to expected intra-cranial anatomical abnormalities (e.g., hyper-intense extra-axial mass for meningioma or sellar region for pituitary). If activation occurs in non-brain background, the prediction may indicate confounding artifact.</p>
+                <div class="guide-lead-title">What it cannot establish</div>
+                <p>A mask does not say what a lesion is. Outlining a region is not a diagnosis, and a neat outline does not mean the model's label is right. Imaging alone cannot replace the clinical work-up.</p>
+              </div>
+              <div class="guide-item">
+                <div class="guide-lead-title">Annotation vs. model</div>
+                <p>The <strong>dataset annotation</strong> is a reference drawn for the dataset. The <strong>model mask</strong> is a prediction. When they disagree, that is a good learning moment &mdash; not an error report.</p>
+              </div>
+              <div class="guide-item">
+                <div class="guide-lead-title">Key terms</div>
+                <ul class="doc-list">
+                  <li><strong>Lesion:</strong> an area that looks different from the tissue around it.</li>
+                  <li><strong>Margin:</strong> the edge of a lesion (smooth, irregular, angular&hellip;).</li>
+                  <li><strong>Segmentation:</strong> outlining the lesion pixel by pixel.</li>
+                  <li><strong>Classification:</strong> assigning a category such as benign or malignant.</li>
+                  <li><strong>Dice / IoU:</strong> scores for how well two outlines overlap (1.0 = identical).</li>
+                  <li><strong>Reference label:</strong> the label in the dataset, not a diagnosis of anyone.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -985,191 +890,20 @@
 
 
         <!-- ============================================== -->
-        <!-- VIEW 5: MODEL LAB                              -->
+        <!-- TAB 6: HISTORY / REPORTS                       -->
         <!-- ============================================== -->
-        <section class="tab-view" id="view-models">
+        <section class="tab-view" id="view-history" aria-labelledby="title-history">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Model Laboratory & Architecture</h1>
-              <p class="view-subtitle">Detailed neural network telemetry, verified training benchmarks, and computational specifications.</p>
-            </div>
-          </div>
-
-          <div class="model-lab-grid">
-            <div class="card model-specs-card">
-              <div class="card-header">
-                <h3 class="card-title">Active Model Specifications</h3>
-                <span class="badge badge-cyan">v1.0 &middot; PyTorch</span>
-              </div>
-
-              <div class="spec-table-list">
-                <div class="spec-item">
-                  <span class="spec-k">Model Name</span>
-                  <span class="spec-v mono">NeuroAccess_AI_model (BrainTumorCNN)</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Framework</span>
-                  <span class="spec-v mono">PyTorch 2.x</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Task Type</span>
-                  <span class="spec-v">4-Class Multi-Category Classification</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Input Resolution</span>
-                  <span class="spec-v mono">224 &times; 224 &times; 3 (RGB)</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Total Parameters</span>
-                  <span class="spec-v mono">12,876,292 parameters</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Training Dataset</span>
-                  <span class="spec-v">5,600 MRI Slices (Glioma, Meningioma, No Tumor, Pituitary)</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Test Evaluation Set</span>
-                  <span class="spec-v mono">1,600 Balanced MRI Slices</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-k">Active Inference Device</span>
-                  <span class="spec-v mono" id="modelLabDevice">CPU (Optimized)</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="card model-benchmarks-card">
-              <div class="card-header">
-                <h3 class="card-title">Verified Training Benchmarks</h3>
-                <span class="badge badge-success">Evaluated</span>
-              </div>
-
-              <div class="benchmark-stats-grid">
-                <div class="bench-stat-box">
-                  <span class="bench-label">TEST ACCURACY</span>
-                  <span class="bench-val mono text-cyan">94.56%</span>
-                  <span class="bench-sub">Out-of-sample evaluation</span>
-                </div>
-                <div class="bench-stat-box">
-                  <span class="bench-label">TRAINING ACCURACY</span>
-                  <span class="bench-val mono text-purple">99.07%</span>
-                  <span class="bench-sub">80 Epochs (Adam + ReduceLROnPlateau)</span>
-                </div>
-                <div class="bench-stat-box">
-                  <span class="bench-label">WEIGHTED F1-SCORE</span>
-                  <span class="bench-val mono text-green">0.94</span>
-                  <span class="bench-sub">Harmonic precision-recall mean</span>
-                </div>
-                <div class="bench-stat-box">
-                  <span class="bench-label">AVG INFERENCE TIME</span>
-                  <span class="bench-val mono" id="benchInferenceTime">34 ms</span>
-                  <span class="bench-sub">Single-slice throughput</span>
-                </div>
-              </div>
-
-              <div class="classes-breakdown-box">
-                <div class="section-title-sm">SUPPORTED MRI CLASSES</div>
-                <div class="class-chips-list">
-                  <div class="class-chip">
-                    <span class="chip-dot dot-glioma"></span>
-                    <strong>glioma</strong>
-                    <span class="mono">Class 0</span>
-                  </div>
-                  <div class="class-chip">
-                    <span class="chip-dot dot-meningioma"></span>
-                    <strong>meningioma</strong>
-                    <span class="mono">Class 1</span>
-                  </div>
-                  <div class="class-chip">
-                    <span class="chip-dot dot-notumor"></span>
-                    <strong>notumor</strong>
-                    <span class="mono">Class 2 (Control)</span>
-                  </div>
-                  <div class="class-chip">
-                    <span class="chip-dot dot-pituitary"></span>
-                    <strong>pituitary</strong>
-                    <span class="mono">Class 3</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card architecture-flow-card">
-            <div class="card-header">
-              <h3 class="card-title">Neural Computation Pipeline</h3>
-            </div>
-            
-            <div class="arch-flow-diagram">
-              <div class="arch-node">
-                <div class="arch-node-badge mono">INPUT</div>
-                <div class="arch-node-title">224 &times; 224 &times; 3</div>
-                <div class="arch-node-sub">Normalized RGB Slice</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node">
-                <div class="arch-node-badge mono">STAGE 1</div>
-                <div class="arch-node-title">Conv2D (3&rarr;32)</div>
-                <div class="arch-node-sub">ReLU + MaxPool(2) &rarr; 112&times;112</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node">
-                <div class="arch-node-badge mono">STAGE 2</div>
-                <div class="arch-node-title">Conv2D (32&rarr;64)</div>
-                <div class="arch-node-sub">ReLU + MaxPool(2) &rarr; 56&times;56</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node">
-                <div class="arch-node-badge mono">STAGE 3</div>
-                <div class="arch-node-title">Conv2D (64&rarr;128)</div>
-                <div class="arch-node-sub">ReLU + MaxPool(2) &rarr; 28&times;28</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node highlight-node">
-                <div class="arch-node-badge mono">GRAD-CAM LAYER</div>
-                <div class="arch-node-title">Conv2D (128&rarr;256)</div>
-                <div class="arch-node-sub">ReLU + MaxPool(2) &rarr; 14&times;14</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node">
-                <div class="arch-node-badge mono">CLASSIFIER</div>
-                <div class="arch-node-title">Linear (50k &rarr; 256)</div>
-                <div class="arch-node-sub">Dropout(0.6) + Linear(4)</div>
-              </div>
-              <div class="arch-arrow">&rarr;</div>
-
-              <div class="arch-node success-node">
-                <div class="arch-node-badge mono">OUTPUT</div>
-                <div class="arch-node-title">Softmax Probs</div>
-                <div class="arch-node-sub">4-Class Probabilities</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-        <!-- ============================================== -->
-        <!-- VIEW 6: SCAN HISTORY                           -->
-        <!-- ============================================== -->
-        <section class="tab-view" id="view-history">
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Study History & Log</h1>
-              <p class="view-subtitle">Chronological record of classified brain MRI cases in current research session.</p>
+              <h1 class="view-title" id="title-history" tabindex="-1">History / Reports</h1>
+              <p class="view-subtitle">Local demo session history. All output here is educational and is cleared with this browser session's storage.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-secondary" id="clearHistoryBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                <span>Clear History</span>
+              <button class="btn btn-secondary" id="clearHistoryBtn" type="button">
+                <span>Clear history</span>
               </button>
-              <button class="btn btn-primary" data-tab="upload">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Analyze New Scan</span>
+              <button class="btn btn-primary" type="button" data-tab="library">
+                <span>Open a case</span>
               </button>
             </div>
           </div>
@@ -1177,63 +911,52 @@
           <div class="card history-table-card">
             <div class="table-toolbar">
               <div class="search-input-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="historySearchInput" placeholder="Filter by Study ID or Category...">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="historySearchInput" placeholder="Filter by entry or case title…" aria-label="Filter history">
               </div>
-              <div class="filter-pills" id="historyFilterPills">
-                <button class="filter-pill active" data-filter="all">All</button>
-                <button class="filter-pill" data-filter="glioma">Glioma</button>
-                <button class="filter-pill" data-filter="meningioma">Meningioma</button>
-                <button class="filter-pill" data-filter="pituitary">Pituitary</button>
-                <button class="filter-pill" data-filter="notumor">No Tumor</button>
+              <div class="filter-pills" id="historyFilterPills" role="group" aria-label="History filter">
+                <button class="filter-pill active" type="button" data-filter="all">All</button>
+                <button class="filter-pill" type="button" data-filter="model">Model runs</button>
+                <button class="filter-pill" type="button" data-filter="viewed">Cases opened</button>
               </div>
             </div>
 
             <div class="table-responsive">
               <table class="data-table">
+                <caption class="sr-only">Session history</caption>
                 <thead>
                   <tr>
-                    <th>Study ID</th>
-                    <th>Date / Time</th>
-                    <th>Preview</th>
-                    <th>Model Prediction</th>
-                    <th>Confidence</th>
-                    <th>Model</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th scope="col">Entry</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Preview</th>
+                    <th scope="col">Case</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Reference label</th>
+                    <th scope="col">Model output</th>
+                    <th scope="col">Open</th>
                   </tr>
                 </thead>
-                <tbody id="historyTableBody">
-                  <!-- Dynamic Rows -->
-                </tbody>
+                <tbody id="historyTableBody"></tbody>
               </table>
             </div>
 
             <div class="empty-table-state" id="emptyHistoryState" hidden>
-              <p>No MRI studies recorded yet.</p>
-              <button class="btn btn-primary-sm" data-tab="upload">Analyze your first scan</button>
+              <p>No activity recorded yet.</p>
+              <button class="btn btn-primary-sm" type="button" data-tab="library">Open your first case</button>
             </div>
           </div>
-        </section>
 
-
-        <!-- ============================================== -->
-        <!-- VIEW 7: RESEARCH REPORTS                       -->
-        <!-- ============================================== -->
-        <section class="tab-view" id="view-reports">
-          <div class="view-header">
+          <div class="view-header" style="margin-top:8px;">
             <div>
-              <h1 class="view-title">Research Reports & Print Export</h1>
-              <p class="view-subtitle">Formatted academic report document for peer review, case archival, and validation logging.</p>
+              <h2 class="view-title" style="font-size:1.25rem;">Session report</h2>
+              <p class="view-subtitle">Educational summary of the selected entry. Print it or export the data.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-secondary" id="printReportBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+              <button class="btn btn-secondary" id="printReportBtn" type="button">
                 <span>Print / Save PDF</span>
               </button>
-              <button class="btn btn-primary" id="exportJsonReportBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Export JSON Data</span>
+              <button class="btn btn-primary" id="exportJsonReportBtn" type="button">
+                <span>Export JSON</span>
               </button>
             </div>
           </div>
@@ -1241,13 +964,13 @@
           <div class="report-sheet-container" id="reportPrintableSheet">
             <div class="report-sheet-header">
               <div class="report-brand">
-                <div class="report-logo-text">NEUROACCESS <span class="accent">AI</span></div>
-                <div class="report-sheet-sub">AI-ASSISTED BRAIN MRI CLASSIFICATION REPORT</div>
+                <div class="report-logo-text">ECHO<span class="accent">ATLAS</span></div>
+                <div class="report-sheet-sub">EDUCATIONAL BREAST-ULTRASOUND CASE SUMMARY</div>
               </div>
               <div class="report-meta-box mono">
-                <div>DOC ID: <strong id="repDocId">REP-2026-0927-01</strong></div>
-                <div>STUDY ID: <strong id="repStudyId">MRI-2026-001</strong></div>
-                <div>DATE: <strong id="repDate">27 Sep 2026 23:30</strong></div>
+                <div>DOC ID: <strong id="repDocId">—</strong></div>
+                <div>ENTRY: <strong id="repEntryId">—</strong></div>
+                <div>DATE: <strong id="repDate">—</strong></div>
               </div>
             </div>
 
@@ -1257,107 +980,130 @@
               <div class="report-visual-col">
                 <div class="report-images-pair">
                   <div class="report-img-card">
-                    <div class="report-img-label">01. INPUT MRI SLICE</div>
-                    <img id="repOriginalImg" src="" alt="Input MRI">
+                    <div class="report-img-label">01. SCAN</div>
+                    <img id="repScanImg" src="" alt="Case scan">
                   </div>
                   <div class="report-img-card">
-                    <div class="report-img-label">02. GRAD-CAM SALIENCE MAP</div>
-                    <img id="repGradcamImg" src="" alt="Grad-CAM Map">
+                    <div class="report-img-label">02. MODEL MASK</div>
+                    <img id="repMaskImg" src="" alt="Experimental model mask" hidden>
+                    <p class="empty-sub" id="repMaskNote">No model mask for this entry.</p>
                   </div>
                 </div>
               </div>
 
               <div class="report-data-col">
-                <div class="report-section-label">AI CLASSIFICATION OUTCOME</div>
-                
+                <div class="report-section-label">CASE</div>
                 <div class="report-verdict-box">
-                  <div class="rep-label-muted">PREDICTED CATEGORY</div>
-                  <div class="rep-verdict-name" id="repPredictedClass">Glioma</div>
+                  <div class="rep-label-muted">CASE TITLE</div>
+                  <div class="rep-verdict-name" id="repCaseTitle" style="font-size:1.1rem;">—</div>
                   <div class="rep-conf-row">
-                    <span>Model Confidence:</span>
-                    <strong class="mono" id="repConfidence">94.7%</strong>
+                    <span>Source:</span>
+                    <strong id="repSource">—</strong>
                   </div>
                 </div>
 
-                <div class="report-section-label">FULL MULTI-CLASS PROBABILITY DISTRIBUTION</div>
+                <div class="report-section-label">DATASET REFERENCE LABEL (NOT A DIAGNOSIS)</div>
+                <div class="report-verdict-box">
+                  <div class="rep-verdict-name" id="repRefLabel" style="font-size:1.1rem;">—</div>
+                </div>
+
+                <div class="report-section-label">EXPERIMENTAL MODEL OUTPUT</div>
+                <div class="report-verdict-box">
+                  <div class="rep-label-muted" id="repModelMode">MODE: —</div>
+                  <div class="rep-verdict-name" id="repPredictedClass" style="font-size:1.1rem;">—</div>
+                  <div class="rep-conf-row">
+                    <span>Model probability:</span>
+                    <strong class="mono" id="repConfidence">—</strong>
+                  </div>
+                </div>
+
                 <table class="report-prob-table">
                   <thead>
                     <tr>
-                      <th>Class Category</th>
-                      <th>Probability</th>
-                      <th>Bar Graph</th>
+                      <th scope="col">Class</th>
+                      <th scope="col">Probability</th>
+                      <th scope="col">Bar</th>
                     </tr>
                   </thead>
-                  <tbody id="repProbTableBody">
-                  </tbody>
+                  <tbody id="repProbTableBody"></tbody>
                 </table>
 
-                <div class="report-section-label">COMPUTATIONAL TELEMETRY</div>
+                <div class="report-section-label">TELEMETRY</div>
                 <div class="report-telemetry-grid mono">
-                  <div>Model: <span>BrainTumorCNN v1.0</span></div>
-                  <div>Framework: <span>PyTorch 2.x</span></div>
-                  <div>Inference Latency: <span id="repLatency">34.2 ms</span></div>
-                  <div>Salience Layer: <span>features[9]</span></div>
+                  <div>Inference time: <span id="repLatency">—</span></div>
+                  <div>Data: <span>BrEaST / Breast-Lesions-USG (TCIA), CC BY 4.0</span></div>
                 </div>
               </div>
             </div>
 
             <div class="report-disclaimer-box">
-              <strong>RESEARCH AND EDUCATIONAL USE ONLY:</strong> This document was produced by an automated artificial intelligence algorithm (NeuroAccess AI) for research experimentation. It is strictly non-diagnostic and must not be used for patient management or therapeutic decisions.
+              <strong>EDUCATIONAL USE ONLY:</strong> This summary was produced by an educational demo. Dataset labels are reference labels and model output is experimental. It is not a diagnosis and must not be used for patient management or treatment decisions.
             </div>
           </div>
         </section>
 
 
         <!-- ============================================== -->
-        <!-- VIEW 8: DOCS & ETHICS                          -->
+        <!-- TAB 7: SOURCES & ETHICS                        -->
         <!-- ============================================== -->
-        <section class="tab-view" id="view-docs">
+        <section class="tab-view" id="view-sources" aria-labelledby="title-sources">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Documentation & Research Ethics</h1>
-              <p class="view-subtitle">Operating principles, data provenance, ethical boundaries, and API integration guidelines.</p>
+              <h1 class="view-title" id="title-sources" tabindex="-1">Sources &amp; Ethics</h1>
+              <p class="view-subtitle">Dataset attribution, evaluation protocol, limitations, and the educational boundary.</p>
             </div>
           </div>
 
           <div class="docs-grid">
             <div class="card doc-card">
-              <h3 class="card-title">Ethical Boundaries & Non-Diagnostic Disclosure</h3>
-              <p>NeuroAccess AI is engineered exclusively as a research testbed and educational demonstration of Convolutional Neural Networks (CNNs) applied to axial brain magnetic resonance images. The system cannot replace human radiological expertise.</p>
+              <h2 class="card-title">Dataset attribution</h2>
+              <p>The planned case source is the <strong>BrEaST / Breast-Lesions-USG</strong> collection on The Cancer Imaging Archive (TCIA): 256 patient cases, 522 ultrasound images, expert lesion annotations, and clinical labels, released under <strong>CC BY 4.0</strong>.</p>
+              <ul class="doc-list">
+                <li><a href="https://www.cancerimagingarchive.net/collection/breast-lesions-usg/" target="_blank" rel="noopener noreferrer">Collection page on TCIA</a></li>
+                <li><a href="https://doi.org/10.1038/s41597-024-02984-z" target="_blank" rel="noopener noreferrer">Dataset paper (Scientific Data, doi:10.1038/s41597-024-02984-z)</a></li>
+                <li>Raw images are not redistributed in this repository; download and cite the dataset from the source.</li>
+              </ul>
+              <p class="card-desc">The app's workstation interface is adapted from the MIT-licensed <a href="https://github.com/atleekumaar/brain-tumor-mri-classifier" target="_blank" rel="noopener noreferrer">atleekumaar/brain-tumor-mri-classifier</a> project.</p>
+            </div>
+
+            <div class="card doc-card">
+              <h2 class="card-title">Split protocol &amp; metrics</h2>
+              <ul class="doc-list">
+                <li>Data is split by patient/case ID so images from the same case never appear in both training and test sets.</li>
+                <li>Augmentation is applied to the training split only.</li>
+                <li>Segmentation is reported with Dice and IoU on held-out cases.</li>
+                <li>Classification (benign vs. malignant, where a usable reference label exists) is reported with AUROC, balanced accuracy, and macro-F1.</li>
+                <li>Any earlier score from a different dataset (for example a prior 94.3% result) is <strong>not</strong> assumed to transfer.</li>
+              </ul>
+            </div>
+
+            <div class="card doc-card">
+              <h2 class="card-title">Limitations</h2>
+              <ul class="doc-list">
+                <li>Small, single-collection dataset; results may not generalize to other scanners, sites, or populations.</li>
+                <li>If the BUSI fallback dataset is used, it lacks reliable public patient IDs and duplicate leakage has been reported; any result is image-level and exploratory, not patient-level validation.</li>
+                <li>Illustrative placeholder cases in this demo are generated pictures, not real patient scans.</li>
+                <li>No fabricated model output is ever shown: when no trained checkpoint is loaded, the app says so.</li>
+              </ul>
+            </div>
+
+            <div class="card doc-card">
+              <h2 class="card-title">Live model status</h2>
+              <ul class="doc-list">
+                <li><strong>API:</strong> <code class="mono" id="srcApiState">—</code></li>
+                <li><strong>Mode:</strong> <code class="mono" id="srcMode">—</code></li>
+                <li><strong>Checkpoint loaded:</strong> <code class="mono" id="srcLoaded">—</code></li>
+                <li><strong>Classes reported:</strong> <code class="mono" id="srcClasses">—</code></li>
+                <li><strong>Device:</strong> <code class="mono" id="srcDevice">—</code></li>
+              </ul>
+            </div>
+
+            <div class="card doc-card">
+              <h2 class="card-title">Educational boundary</h2>
               <div class="disclaimer-callout">
-                <strong>Strict Medical Non-Use Policy:</strong>
-                Never interpret predictions as clinical diagnosis. Brain tumors encompass complex histological subtypes and immunohistochemical markers that cannot be solely determined from single 2D MR images without tissue biopsy and multimodal clinical workups.
+                <strong>Not a medical product:</strong>
+                EchoAtlas is not a patient-facing tool, not a diagnostic device, and not a clinical decision system. Do not use it to diagnose, treat, or guide care. Always rely on qualified clinicians and validated systems for clinical decisions.
               </div>
-            </div>
-
-            <div class="card doc-card">
-              <h3 class="card-title">Dataset & Preprocessing Protocol</h3>
-              <p>The neural network was trained on 5,600 verified brain MRI slices across four balanced categories: <em>Glioma</em>, <em>Meningioma</em>, <em>No Tumor</em>, and <em>Pituitary</em>. Testing was performed on a held-out set of 1,600 images achieving 94.56% validation accuracy.</p>
-              <ul class="doc-list">
-                <li>Input images are resized to 224&times;224 pixels with bilinear interpolation.</li>
-                <li>Channels are normalized: Mean <code>[0.485, 0.456, 0.406]</code>, Std <code>[0.229, 0.224, 0.225]</code>.</li>
-                <li>Feature maps are extracted via four sequential Conv2D + ReLU + MaxPool blocks.</li>
-              </ul>
-            </div>
-
-            <div class="card doc-card">
-              <h3 class="card-title">Research Methodology & Interpretability</h3>
-              <p>Grad-CAM (Gradient-weighted Class Activation Mapping) computes the gradients of the target classification score with respect to the final convolutional feature map, generating coarse 2D heatmaps highlighting spatial regions influencing the model's prediction.</p>
-              <ul class="doc-list">
-                <li>Heatmap values are normalized between 0.0 (baseline) and 1.0 (peak attention).</li>
-                <li>Red/Warm tones indicate morphological features strongly correlated with the predicted tumor class.</li>
-                <li>Blue/Cool tones indicate lower neural weight contribution.</li>
-              </ul>
-            </div>
-
-            <div class="card doc-card">
-              <h3 class="card-title">Technical Benchmark & Operational Telemetry</h3>
-              <p>Baseline execution benchmarks and operational metrics recorded during neural evaluation:</p>
-              <ul class="doc-list">
-                <li><strong>Model Baseline Accuracy:</strong> <code class="mono">94.56%</code> (Evaluated across 1,600 verified test slices).</li>
-                <li><strong>Inference Latency:</strong> <code class="mono">~35 ms</code> (Real-time neural forward-pass latency on GPU/CPU).</li>
-                <li><strong>Session History Tracking:</strong> <code class="mono" id="overviewScanCount">0</code> active studies logged in local session telemetry.</li>
-              </ul>
             </div>
           </div>
         </section>
@@ -1368,11 +1114,11 @@
 
 
   <!-- ================================================== -->
-  <!-- AI ANALYSIS LOADING OVERLAY MODAL                  -->
+  <!-- MODEL RUN LOADING MODAL                            -->
   <!-- ================================================== -->
-  <div class="loading-modal-backdrop" id="loadingModal" hidden style="display:none;">
+  <div class="loading-modal-backdrop" id="loadingModal" hidden style="display:none;" role="dialog" aria-modal="true" aria-labelledby="loadingTitle">
     <div class="loading-modal-card">
-      <div class="loading-neural-spinner">
+      <div class="loading-neural-spinner" aria-hidden="true">
         <div class="spinner-ring ring-outer"></div>
         <div class="spinner-ring ring-mid"></div>
         <div class="spinner-ring ring-inner"></div>
@@ -1380,71 +1126,70 @@
       </div>
 
       <div class="loading-header">
-        <h3 class="loading-title">ANALYZING MRI</h3>
-        <p class="loading-sub">Executing deep convolutional neural inference...</p>
+        <h2 class="loading-title" id="loadingTitle">RUNNING EXPERIMENTAL MODEL</h2>
+        <p class="loading-sub">Asking the model API for a mask and a label…</p>
       </div>
 
-      <div class="loading-steps-list">
+      <div class="loading-steps-list" aria-live="polite">
         <div class="loading-step-item done" id="lStep1">
-          <span class="step-check">&check;</span>
-          <span class="step-text">Image Preprocessing (224&times;224 Normalization)</span>
+          <span class="step-check" aria-hidden="true">&check;</span>
+          <span class="step-text">Preparing the image</span>
         </div>
         <div class="loading-step-item active" id="lStep2">
-          <span class="step-check">&bull;</span>
-          <span class="step-text">Feature Map Extraction (4 Conv2D Blocks)</span>
+          <span class="step-check" aria-hidden="true">&bull;</span>
+          <span class="step-text">Sending to the model API</span>
         </div>
         <div class="loading-step-item" id="lStep3">
-          <span class="step-check">&bull;</span>
-          <span class="step-text">Neural Inference & Softmax Probabilities</span>
+          <span class="step-check" aria-hidden="true">&bull;</span>
+          <span class="step-text">Checking that a trained checkpoint answered</span>
         </div>
         <div class="loading-step-item" id="lStep4">
-          <span class="step-check">&bull;</span>
-          <span class="step-text">Grad-CAM Spatial Explainability Computation</span>
+          <span class="step-check" aria-hidden="true">&bull;</span>
+          <span class="step-text">Preparing the comparison view</span>
         </div>
       </div>
 
       <div class="loading-telemetry-dock mono">
-        <div>PROCESSING: <span id="loadingTimeCounter">0 ms</span></div>
-        <div>DEVICE: <span id="loadingDevice">CPU / CUDA</span></div>
+        <div>ELAPSED: <span id="loadingTimeCounter">0 ms</span></div>
       </div>
     </div>
   </div>
 
 
   <!-- ================================================== -->
-  <!-- RESEARCH DISCLAIMER MODAL                          -->
+  <!-- EDUCATIONAL NOTICE MODAL                           -->
   <!-- ================================================== -->
-  <div class="modal-backdrop" id="disclaimerModal" hidden style="display:none;">
+  <div class="modal-backdrop" id="disclaimerModal" hidden style="display:none;" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title-wrap">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#39D5FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <h3 class="modal-title">AI Research & Educational Tool Disclosure</h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2EC4B6" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <h2 class="modal-title" id="disclaimerTitle">Educational Tool Notice</h2>
         </div>
-        <button class="btn-close" id="closeDisclaimerBtn">&times;</button>
+        <button class="btn-close" id="closeDisclaimerBtn" type="button" aria-label="Close notice">&times;</button>
       </div>
       <div class="modal-body">
-        <p><strong>NEUROACCESS AI</strong> is an open-source machine learning workstation developed for computational neuroscience research, computer vision evaluation, and academic education.</p>
+        <p><strong>EchoAtlas</strong> is an educational case explorer for medical learners, built for Code Ada's Tech for Equity track.</p>
         <div class="disclaimer-alert-box">
-          <strong>Important Clinical Notice:</strong>
+          <strong>Important notice:</strong>
           <ul>
-            <li>This software is <strong>NOT</strong> an FDA-approved or CE-marked medical device.</li>
-            <li>Do <strong>NOT</strong> use this system for medical diagnosis, prognosis, surgical planning, or therapy selection.</li>
-            <li>Always consult licensed radiologists and oncologists for clinical MRI review.</li>
+            <li>This is <strong>NOT</strong> a patient-facing diagnostic tool or a clinical decision system.</li>
+            <li>Dataset labels are reference labels; model output is experimental. Neither is a diagnosis.</li>
+            <li>Do <strong>NOT</strong> use it to diagnose, treat, or guide care.</li>
+            <li>Always consult qualified clinicians for clinical imaging review.</li>
           </ul>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" id="ackDisclaimerBtn">I Understand & Acknowledge</button>
+        <button class="btn btn-primary" id="ackDisclaimerBtn" type="button">I understand</button>
       </div>
     </div>
   </div>
 
   <!-- Toast Notification Container -->
-  <div class="toast-container" id="toastContainer"></div>
+  <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
-  <!-- Application Script & Real MRI Datasets -->
-  <script src="assets/samples/real_mri_data.js"></script>
+  <!-- Application Script -->
   <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,24 @@
 /**
- * NEUROACCESS AI — Production Clinical AI Workstation Controller
- * Advanced Medical AI & Radiology Imaging Interface
+ * ECHOATLAS — Accessible Breast-Ultrasound Case-Learning Workstation
+ * Educational, non-diagnostic UI controller (Code Ada 2026 · Tech for Equity).
+ *
+ * Integration contract with the backend (see TEAM_PLAN.md):
+ *   POST /predict -> {
+ *     mode: "trained" | "mock" | ...,
+ *     prediction: "benign" | "malignant",
+ *     probabilities: { benign: 0.72, malignant: 0.28 },   // 0-1 (0-100 also accepted)
+ *     segmentation_mask: "data:image/png;base64,...",
+ *     inference_time_ms: 42
+ *   }
+ *   GET /api/status -> { model_loaded, mode?, classes, device, metrics? }
+ *   GET /api/cases  -> OPTIONAL list of real dataset cases:
+ *     [{ id, title, image, annotation_mask?, reference_label?, description?, source? }]
+ *
+ * Honesty rules enforced here:
+ *   - Model output is shown ONLY when the response says mode === "trained"
+ *     and the prediction is a benign/malignant class. Anything else is shown
+ *     as "demo-only" and the prediction is discarded.
+ *   - Dataset annotations/labels and model output are always labelled separately.
  */
 
 (function () {
@@ -8,1091 +26,1654 @@
 
   const API_BASE = window.location.origin.includes("http") ? window.location.origin : "http://127.0.0.1:8000";
 
-  // 4 Core Model Classes Metadata (Matching PyTorch model)
+  // Classes the EchoAtlas UI understands.
   const CLASS_META = {
-    glioma: {
-      label: "Glioma",
-      categoryBadge: "Tumor Indicated",
-      badgeClass: "badge-danger",
-      color: "#FF5C6C",
-      desc: "Intra-axial glial origin neoplasm",
-      layer: "features.conv4"
-    },
-    meningioma: {
-      label: "Meningioma",
-      categoryBadge: "Tumor Indicated",
-      badgeClass: "badge-warning",
-      color: "#FFB547",
-      desc: "Extra-axial dural-based lesion",
-      layer: "features.conv4"
-    },
-    pituitary: {
-      label: "Pituitary",
-      categoryBadge: "Tumor Indicated",
-      badgeClass: "badge-purple",
-      color: "#7C6CFF",
-      desc: "Sellar / parasellar region neoplasm",
-      layer: "features.conv4"
-    },
-    notumor: {
-      label: "No Tumor",
-      categoryBadge: "Clear Scan (Control)",
-      badgeClass: "badge-success",
-      color: "#32D583",
-      desc: "No intracranial mass lesion detected",
-      layer: "features.conv4"
-    }
+    benign: { label: "Benign", badgeClass: "badge-success", color: "#2EC4B6" },
+    malignant: { label: "Malignant", badgeClass: "badge-warning", color: "#FF7F6E" }
   };
 
+  const ANNOTATION_COLOR = "#FF7F6E";
+  const HISTORY_KEY = "echoatlas_history";
+  const THEME_KEY = "echoatlas_theme";
+
+  // ---------------------------------------------------------------------
   // State
+  // ---------------------------------------------------------------------
   const state = {
-    currentStudy: null,
-    studiesHistory: [],
-    selectedFile: null,
+    cases: [],
+    caseSource: "illustrative", // "illustrative" | "dataset"
+    currentCase: null,
+    history: [],
+    historyCounter: 0,
+    reportEntryId: null,
+    maskCache: {}, // entryId -> mask data URL (memory only)
+    pendingUpload: null, // { file, dataUrl, width, height }
+    activeTab: "overview",
+    model: {
+      online: false,
+      loaded: false,
+      mode: "unknown",
+      compatible: false,
+      device: "—",
+      classes: [],
+      metrics: null
+    },
     viewer: {
       zoom: 1.0,
       brightness: 100,
       contrast: 100,
-      camOpacity: 0,
-      currentSlice: 1,
-      totalSlices: 4
-    },
-    systemOnline: false
+      annotationOpacity: 85,
+      modelOpacity: 70,
+      showAnnotation: false,
+      showModel: false
+    }
   };
 
-  // =========================================================================
-  // REAL CLINICAL MRI DATASET IMAGES
-  // =========================================================================
-  const SAMPLES = (window.REAL_MRI_SAMPLES && Object.keys(window.REAL_MRI_SAMPLES).length > 0)
-    ? window.REAL_MRI_SAMPLES
-    : {
-        glioma: "/assets/samples/glioma.jpg",
-        meningioma: "/assets/samples/meningioma.jpg",
-        pituitary: "/assets/samples/pituitary.jpg",
-        notumor: "/assets/samples/notumor.jpg",
-        glioma2: "/assets/samples/glioma2.jpg"
-      };
+  // ---------------------------------------------------------------------
+  // Small utilities
+  // ---------------------------------------------------------------------
+  const $ = id => document.getElementById(id);
 
-  // Lesion Coordinates for Realistic Grad-CAM Saliency Focus
-  const LESION_CENTERS = {
-    glioma: { x: 155, y: 95, radius: 45 },
-    meningioma: { x: 65, y: 110, radius: 40 },
-    pituitary: { x: 112, y: 145, radius: 35 },
-    notumor: { x: 112, y: 112, radius: 20 },
-    glioma2: { x: 90, y: 130, radius: 42 }
-  };
-
-  function createRealisticHeatmap(sampleKey) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 224;
-    canvas.height = 224;
-    const ctx = canvas.getContext("2d");
-
-    const target = LESION_CENTERS[sampleKey] || { x: 112, y: 112, radius: 35 };
-
-    if (sampleKey === "notumor") {
-      // Diffuse low-level background activation
-      const rad = ctx.createRadialGradient(target.x, target.y, 5, target.x, target.y, 80);
-      rad.addColorStop(0, "rgba(57, 213, 255, 0.25)");
-      rad.addColorStop(0.5, "rgba(124, 108, 255, 0.15)");
-      rad.addColorStop(1, "rgba(0, 0, 0, 0)");
-      ctx.fillStyle = rad;
-      ctx.fillRect(0, 0, 224, 224);
-    } else {
-      // Focal high-intensity pathological Grad-CAM activation
-      const rad = ctx.createRadialGradient(target.x, target.y, 4, target.x, target.y, target.radius);
-      rad.addColorStop(0, "rgba(255, 92, 108, 0.95)"); // Peak Red
-      rad.addColorStop(0.35, "rgba(255, 181, 71, 0.85)"); // Orange/Yellow
-      rad.addColorStop(0.65, "rgba(124, 108, 255, 0.6)"); // Purple
-      rad.addColorStop(0.9, "rgba(57, 213, 255, 0.3)"); // Cyan rim
-      rad.addColorStop(1, "rgba(0, 0, 0, 0)");
-      ctx.fillStyle = rad;
-      ctx.fillRect(0, 0, 224, 224);
-    }
-
-    return canvas.toDataURL("image/png");
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
-  function dataUrlToFile(dataUrl, filename) {
-    if (dataUrl.startsWith("data:")) {
-      const arr = dataUrl.split(",");
-      const mime = arr[0].match(/:(.*?);/)[1];
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new File([u8arr], filename, { type: mime });
-    }
-    // If URL path, create minimal mock file
-    return new File([""], filename, { type: "image/jpeg" });
+  function cap(s) {
+    s = String(s || "");
+    return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  // =========================================================================
-  // DOM REFERENCES
-  // =========================================================================
-  const dom = {
-    navLinks: document.querySelectorAll("[data-tab]"),
-    tabViews: document.querySelectorAll(".tab-view"),
-    brandHomeBtn: document.getElementById("brandHomeBtn"),
-    quickAnalyzeBtn: document.getElementById("quickAnalyzeBtn"),
-
-    systemStatusDot: document.getElementById("systemStatusDot"),
-    systemStatusText: document.getElementById("systemStatusText"),
-    latencyChip: document.getElementById("latencyChip"),
-    sidebarDeviceName: document.getElementById("sidebarDeviceName"),
-
-    overviewAccuracy: document.getElementById("overviewAccuracy"),
-    overviewInferenceTime: document.getElementById("overviewInferenceTime"),
-    overviewScanCount: document.getElementById("overviewScanCount"),
-    overviewRecentTbody: document.getElementById("overviewRecentTbody"),
-    sampleScanBtns: document.querySelectorAll(".sample-scan-btn"),
-
-    dropZone: document.getElementById("dropZone"),
-    filePickerInput: document.getElementById("filePickerInput"),
-    dropzonePrompt: document.getElementById("dropzonePrompt"),
-    dropzonePreviewStage: document.getElementById("dropzonePreviewStage"),
-    browseFileBtn: document.getElementById("browseFileBtn"),
-    stagePreviewImage: document.getElementById("stagePreviewImage"),
-    stageFilename: document.getElementById("stageFilename"),
-    stageDimensions: document.getElementById("stageDimensions"),
-    stageFileSize: document.getElementById("stageFileSize"),
-    changeSelectedFileBtn: document.getElementById("changeSelectedFileBtn"),
-    startInferenceBtn: document.getElementById("startInferenceBtn"),
-
-    panelChangeScanBtn: document.getElementById("panelChangeScanBtn"),
-    workspaceNewScanBtn: document.getElementById("workspaceNewScanBtn"),
-    studyThumbnail: document.getElementById("studyThumbnail"),
-    studyIdText: document.getElementById("studyIdText"),
-    studySliceCount: document.getElementById("studySliceCount"),
-    studyStatusPill: document.getElementById("studyStatusPill"),
-    studyFileName: document.getElementById("studyFileName"),
-
-    mriViewport: document.getElementById("mriViewport"),
-    mriCanvasStage: document.getElementById("mriCanvasStage"),
-    viewerEmptyState: document.getElementById("viewerEmptyState"),
-    mriViewerImage: document.getElementById("mriViewerImage"),
-    mriViewerHeatmap: document.getElementById("mriViewerHeatmap"),
-    laserScanline: document.getElementById("laserScanline"),
-    hudZoomText: document.getElementById("hudZoomText"),
-    hudDimText: document.getElementById("hudDimText"),
-
-    zoomInBtn: document.getElementById("zoomInBtn"),
-    zoomOutBtn: document.getElementById("zoomOutBtn"),
-    zoomFitBtn: document.getElementById("zoomFitBtn"),
-    resetViewerBtn: document.getElementById("resetViewerBtn"),
-    fullscreenViewerBtn: document.getElementById("fullscreenViewerBtn"),
-    prevSliceBtn: document.getElementById("prevSliceBtn"),
-    nextSliceBtn: document.getElementById("nextSliceBtn"),
-    sliceCounterText: document.getElementById("sliceCounterText"),
-    sliceSlider: document.getElementById("sliceSlider"),
-    brightnessSlider: document.getElementById("brightnessSlider"),
-    contrastSlider: document.getElementById("contrastSlider"),
-    camOpacitySlider: document.getElementById("camOpacitySlider"),
-
-    analysisStatusChip: document.getElementById("analysisStatusChip"),
-    analysisStatusLabel: document.getElementById("analysisStatusLabel"),
-    verdictClassName: document.getElementById("verdictClassName"),
-    verdictCategoryBadge: document.getElementById("verdictCategoryBadge"),
-    verdictConfidenceVal: document.getElementById("verdictConfidenceVal"),
-    verdictConfidenceFill: document.getElementById("verdictConfidenceFill"),
-    probBarsList: document.getElementById("probBarsList"),
-    quickCamHeatmap: document.getElementById("quickCamHeatmap"),
-    generateReportQuickBtn: document.getElementById("generateReportQuickBtn"),
-
-    explainOriginalImg: document.getElementById("explainOriginalImg"),
-    explainHeatmapImg: document.getElementById("explainHeatmapImg"),
-    explainOverlayBaseImg: document.getElementById("explainOverlayBaseImg"),
-    explainOverlayHeatmapImg: document.getElementById("explainOverlayHeatmapImg"),
-    explainOpacitySlider: document.getElementById("explainOpacitySlider"),
-    explainOpacityVal: document.getElementById("explainOpacityVal"),
-
-    modelLabDevice: document.getElementById("modelLabDevice"),
-    benchInferenceTime: document.getElementById("benchInferenceTime"),
-
-    historySearchInput: document.getElementById("historySearchInput"),
-    historyFilterPills: document.getElementById("historyFilterPills"),
-    historyTableBody: document.getElementById("historyTableBody"),
-    emptyHistoryState: document.getElementById("emptyHistoryState"),
-    clearHistoryBtn: document.getElementById("clearHistoryBtn"),
-
-    repDocId: document.getElementById("repDocId"),
-    repStudyId: document.getElementById("repStudyId"),
-    repDate: document.getElementById("repDate"),
-    repOriginalImg: document.getElementById("repOriginalImg"),
-    repGradcamImg: document.getElementById("repGradcamImg"),
-    repPredictedClass: document.getElementById("repPredictedClass"),
-    repConfidence: document.getElementById("repConfidence"),
-    repProbTableBody: document.getElementById("repProbTableBody"),
-    repLatency: document.getElementById("repLatency"),
-    printReportBtn: document.getElementById("printReportBtn"),
-    exportJsonReportBtn: document.getElementById("exportJsonReportBtn"),
-
-    loadingModal: document.getElementById("loadingModal"),
-    loadingTimeCounter: document.getElementById("loadingTimeCounter"),
-    loadingDevice: document.getElementById("loadingDevice"),
-    lStep1: document.getElementById("lStep1"),
-    lStep2: document.getElementById("lStep2"),
-    lStep3: document.getElementById("lStep3"),
-    lStep4: document.getElementById("lStep4"),
-
-    disclaimerModal: document.getElementById("disclaimerModal"),
-    disclaimerModalBtn: document.getElementById("disclaimerModalBtn"),
-    closeDisclaimerBtn: document.getElementById("closeDisclaimerBtn"),
-    ackDisclaimerBtn: document.getElementById("ackDisclaimerBtn"),
-    toastContainer: document.getElementById("toastContainer"),
-    themeToggleBtn: document.getElementById("themeToggleBtn"),
-    themeLabel: document.getElementById("themeLabel")
-  };
-
-  // =========================================================================
-  // THEME CONTROLLER (DARK / LIGHT MODE)
-  // =========================================================================
-  function applyTheme(theme) {
-    if (theme === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-      if (dom.themeLabel) dom.themeLabel.textContent = "Dark Mode";
-      localStorage.setItem("neuroscan_theme", "light");
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-      if (dom.themeLabel) dom.themeLabel.textContent = "Light Mode";
-      localStorage.setItem("neuroscan_theme", "dark");
-    }
+  function labelOf(cls) {
+    return CLASS_META[cls] ? CLASS_META[cls].label : cap(cls);
   }
 
-  const initialTheme = localStorage.getItem("neuroscan_theme") || "dark";
-  applyTheme(initialTheme);
-
-  if (dom.themeToggleBtn) {
-    dom.themeToggleBtn.addEventListener("click", () => {
-      const currentTheme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
-      const newTheme = currentTheme === "light" ? "dark" : "light";
-      applyTheme(newTheme);
-      showToast(`Switched to ${newTheme === "light" ? "Clinical Light" : "Dark Workstation"} theme`, "info");
-    });
+  function setText(id, text) {
+    const el = $(id);
+    if (el) el.textContent = text;
   }
 
-  // =========================================================================
-  // TOAST NOTIFICATIONS
-  // =========================================================================
+  function setHtml(id, html) {
+    const el = $(id);
+    if (el) el.innerHTML = html;
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function normalizeProbs(obj) {
+    const entries = Object.entries(obj || {}).filter(([, v]) => typeof v === "number" && isFinite(v));
+    const sum = entries.reduce((a, [, v]) => a + v, 0);
+    const scale = sum <= 1.5 ? 100 : 1; // 0-1 scale -> percent
+    const out = {};
+    entries.forEach(([k, v]) => { out[String(k).toLowerCase()] = v * scale; });
+    return out;
+  }
+
+  // ---------------------------------------------------------------------
+  // Toasts
+  // ---------------------------------------------------------------------
   function showToast(message, type = "info") {
-    if (!dom.toastContainer) return;
+    const container = $("toastContainer");
+    if (!container) return;
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    dom.toastContainer.appendChild(toast);
+    container.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = "0";
       setTimeout(() => toast.remove(), 250);
-    }, 3200);
+    }, 4200);
   }
 
-  // =========================================================================
-  // TAB NAVIGATION
-  // =========================================================================
-  function switchTab(tabId) {
-    document.querySelectorAll("[data-tab]").forEach(el => {
-      if (el.getAttribute("data-tab") === tabId) {
-        el.classList.add("active");
-      } else {
-        el.classList.remove("active");
-      }
-    });
-
-    dom.tabViews.forEach(view => {
-      if (view.id === `view-${tabId}`) {
-        view.classList.add("active");
-      } else {
-        view.classList.remove("active");
-      }
-    });
-
-    if (tabId === "workspace" || tabId === "explainability" || tabId === "reports") {
-      updateWorkspaceView();
+  // ---------------------------------------------------------------------
+  // Theme
+  // ---------------------------------------------------------------------
+  function applyTheme(theme) {
+    if (theme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+      setText("themeLabel", "Dark Mode");
+      localStorage.setItem(THEME_KEY, "light");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      setText("themeLabel", "Light Mode");
+      localStorage.setItem(THEME_KEY, "dark");
     }
   }
 
-  dom.navLinks.forEach(link => {
-    link.addEventListener("click", e => {
-      e.preventDefault();
-      const target = link.getAttribute("data-tab");
-      if (target) switchTab(target);
-    });
+  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+
+  $("themeToggleBtn").addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    applyTheme(next);
+    showToast(`Switched to ${next} mode`, "info");
   });
 
-  if (dom.brandHomeBtn) {
-    dom.brandHomeBtn.addEventListener("click", () => switchTab("overview"));
-  }
-  if (dom.quickAnalyzeBtn) {
-    dom.quickAnalyzeBtn.addEventListener("click", () => switchTab("upload"));
+  // ---------------------------------------------------------------------
+  // Illustrative placeholder cases (generated pictures, NOT patient data)
+  // ---------------------------------------------------------------------
+  const PLACEHOLDER_DEFS = [
+    {
+      id: "ILL-001", seed: 11, kind: "benign",
+      title: "Smooth oval lesion",
+      point: "Look at the margin: smooth and well-circumscribed edges, with brighter tissue behind the lesion (posterior enhancement), are features learners often review."
+    },
+    {
+      id: "ILL-002", seed: 23, kind: "malignant",
+      title: "Irregular margin",
+      point: "Look at the margin: an irregular outline with darker tissue behind the lesion (posterior shadowing) is another feature learners often review."
+    },
+    {
+      id: "ILL-003", seed: 37, kind: "benign",
+      title: "Small round lesion",
+      point: "Compare size and shape: small, round, and smooth. Notice how the annotation hugs the edge."
+    },
+    {
+      id: "ILL-004", seed: 41, kind: "malignant",
+      title: "Angular margin",
+      point: "Look for corners and angles in the outline. Compare how the annotation follows the uneven edge."
+    },
+    {
+      id: "ILL-005", seed: 59, kind: "benign",
+      title: "Wider-than-tall oval",
+      point: "Notice the orientation: the lesion is wider than it is tall, lying parallel to the skin surface."
+    },
+    {
+      id: "ILL-006", seed: 73, kind: "malignant",
+      title: "Ill-defined edges",
+      point: "Notice how hard the edge is to place. When edges are fuzzy, different annotators may draw slightly different outlines."
+    }
+  ];
+
+  function buildPhantom(def) {
+    const W = 512;
+    const H = 384;
+    const rnd = mulberry32(def.seed);
+    const benign = def.kind === "benign";
+
+    const cx = W * (0.36 + rnd() * 0.28);
+    const cy = H * (0.42 + rnd() * 0.18);
+    const rx = 34 + rnd() * 30;
+    const ry = rx * (benign ? 0.58 + rnd() * 0.14 : 0.72 + rnd() * 0.2);
+    const harmonics = benign
+      ? [[2, 0.03], [3, 0.02]]
+      : [[3, 0.16], [5, 0.12], [7, 0.08], [9, 0.05]];
+    const phases = harmonics.map(() => rnd() * Math.PI * 2);
+
+    const radiusAt = theta => {
+      let m = 1;
+      harmonics.forEach(([k, a], i) => { m += a * Math.sin(k * theta + phases[i]); });
+      return m;
+    };
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    const img = ctx.createImageData(W, H);
+    const d = img.data;
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const depth = y / H;
+        let base = 78 - 44 * depth + 10 * Math.sin(y * 0.09 + 1.3);
+        if (y < 16) base += 70 * (1 - y / 16); // skin line
+        const edgeFade = 1 - Math.pow(Math.abs(x / W - 0.5) * 2, 3) * 0.5;
+        const speckle = -Math.log(1 - rnd() * 0.999);
+        let v = base * edgeFade * (0.45 + 0.42 * speckle);
+
+        const dx = (x - cx) / rx;
+        const dy = (y - cy) / ry;
+        const rho = Math.hypot(dx, dy);
+        const lim = radiusAt(Math.atan2(dy, dx));
+        const t = rho / lim;
+        if (t < 1.08) {
+          const soft = Math.min(1, Math.max(0, (1.08 - t) / 0.16));
+          v = v * (1 - soft) + v * 0.26 * soft;
+        }
+
+        // posterior features below the lesion
+        if (y > cy + ry && Math.abs(x - cx) < rx * 0.95) {
+          const fall = Math.max(0, 1 - (y - (cy + ry)) / (H * 0.4));
+          v *= benign ? 1 + 0.35 * fall : 1 - 0.45 * fall;
+        }
+
+        v = Math.max(0, Math.min(255, v));
+        const idx = (y * W + x) * 4;
+        d[idx] = v;
+        d[idx + 1] = v;
+        d[idx + 2] = v;
+        d[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const imageUrl = canvas.toDataURL("image/png");
+
+    // Annotation overlay: outline + soft fill on a transparent canvas of equal size
+    const ann = document.createElement("canvas");
+    ann.width = W;
+    ann.height = H;
+    const actx = ann.getContext("2d");
+    actx.beginPath();
+    const steps = 180;
+    for (let i = 0; i <= steps; i++) {
+      const phi = (i / steps) * Math.PI * 2;
+      const r = radiusAt(phi);
+      const px = cx + rx * r * Math.cos(phi);
+      const py = cy + ry * r * Math.sin(phi);
+      if (i === 0) actx.moveTo(px, py); else actx.lineTo(px, py);
+    }
+    actx.closePath();
+    actx.fillStyle = "rgba(255, 127, 110, 0.22)";
+    actx.fill();
+    actx.lineWidth = 3;
+    actx.strokeStyle = ANNOTATION_COLOR;
+    actx.stroke();
+
+    return {
+      id: def.id,
+      title: def.title,
+      source: "illustrative",
+      imageUrl,
+      annotationUrl: ann.toDataURL("image/png"),
+      refLabel: def.kind,
+      refNote: "Illustrative reference label for the demo flow — not a real patient outcome.",
+      point: def.point,
+      filename: `${def.id}.png`,
+      width: W,
+      height: H,
+      file: null,
+      progress: { inspected: false, annotation: false, model: false, compared: false },
+      analysis: null
+    };
   }
 
-  // =========================================================================
-  // BACKEND API STATUS CHECK
-  // =========================================================================
+  // ---------------------------------------------------------------------
+  // Case loading (real dataset cases from the API if available)
+  // ---------------------------------------------------------------------
+  function resolveUrl(u) {
+    if (!u) return null;
+    try { return new URL(u, API_BASE + "/").href; } catch (e) { return u; }
+  }
+
+  async function loadCases() {
+    let cases = null;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch(`${API_BASE}/api/cases`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data && data.cases;
+        if (Array.isArray(list) && list.length > 0) {
+          cases = list.map((c, i) => ({
+            id: String(c.id || `CASE-${i + 1}`),
+            title: c.title || `Case ${c.id || i + 1}`,
+            source: "dataset",
+            imageUrl: resolveUrl(c.image),
+            annotationUrl: resolveUrl(c.annotation_mask),
+            refLabel: c.reference_label ? String(c.reference_label).toLowerCase() : null,
+            refNote: c.reference_note || "Label supplied by the source dataset for this case. It is not a diagnosis.",
+            point: c.description || "Compare the scan, the expert annotation, and the model mask.",
+            filename: c.filename || String(c.image || "").split("/").pop() || `${c.id}.png`,
+            width: null,
+            height: null,
+            file: null,
+            progress: { inspected: false, annotation: false, model: false, compared: false },
+            analysis: null
+          }));
+        }
+      }
+    } catch (e) {
+      /* API offline or endpoint not implemented: fall back to placeholders */
+    }
+
+    if (cases) {
+      state.cases = cases;
+      state.caseSource = "dataset";
+    } else {
+      state.cases = PLACEHOLDER_DEFS.map(buildPhantom);
+      state.caseSource = "illustrative";
+    }
+  }
+
+  function findCase(id) {
+    return state.cases.find(c => c.id === id) || null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Model status
+  // ---------------------------------------------------------------------
+  function describeModel() {
+    const m = state.model;
+    if (!m.online) {
+      return {
+        key: "offline",
+        trusted: false,
+        short: "API offline",
+        bar: "API OFFLINE · VIEW ONLY",
+        notice: "<strong>Demo-only — model API offline.</strong> You can still explore the scan and the dataset annotation. No model output is available."
+      };
+    }
+    if (!m.loaded) {
+      return {
+        key: "noweights",
+        trusted: false,
+        short: "No trained checkpoint",
+        bar: "NO CHECKPOINT · DEMO ONLY",
+        notice: "<strong>Demo-only — no trained checkpoint is loaded.</strong> Any label the model returned would be simulated, so none is shown. The dataset annotation is still available."
+      };
+    }
+    if (!m.compatible) {
+      const seen = m.classes.length ? m.classes.join(", ") : "none reported";
+      return {
+        key: "mismatch",
+        trusted: false,
+        short: "Checkpoint mismatch",
+        bar: "CHECKPOINT MISMATCH · DEMO ONLY",
+        notice: `<strong>Demo-only — checkpoint does not match this task.</strong> The model reports classes (${esc(seen)}) instead of benign / malignant, so its output is not shown.`
+      };
+    }
+    if (m.mode !== "trained") {
+      return {
+        key: "demo",
+        trusted: false,
+        short: `Mode: ${m.mode}`,
+        bar: "DEMO MODE · NO OUTPUT SHOWN",
+        notice: `<strong>Demo-only — the API reports mode “${esc(m.mode)}”.</strong> Only a trained checkpoint's output is shown as a prediction.`
+      };
+    }
+    return {
+      key: "ready",
+      trusted: true,
+      short: "Trained checkpoint",
+      bar: "MODEL READY (EXPERIMENTAL)",
+      notice: "<strong>Trained checkpoint reported.</strong> Output is experimental and educational. It is not a diagnosis."
+    };
+  }
+
   async function checkApiStatus() {
     const t0 = performance.now();
     try {
       const res = await fetch(`${API_BASE}/api/status`, { method: "GET" });
       const elapsed = Math.round(performance.now() - t0);
-      if (res.ok) {
-        const data = await res.json();
-        state.systemOnline = true;
-        if (dom.systemStatusDot) dom.systemStatusDot.className = "status-indicator online";
-        if (dom.systemStatusText) dom.systemStatusText.textContent = "SYSTEM ONLINE";
-        if (dom.latencyChip) dom.latencyChip.textContent = `${elapsed} ms`;
-        if (dom.sidebarDeviceName) dom.sidebarDeviceName.textContent = data.device || "CUDA/CPU";
-        if (dom.modelLabDevice) dom.modelLabDevice.textContent = `${data.device || "CPU"} (Active PyTorch Engine)`;
-      } else {
-        throw new Error("HTTP " + res.status);
-      }
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      const classes = Array.isArray(data.classes) ? data.classes.map(c => String(c).toLowerCase()) : [];
+      state.model = {
+        online: true,
+        loaded: data.model_loaded === true,
+        mode: data.mode || (data.model_loaded ? "trained" : "demo"),
+        compatible: classes.includes("benign") && classes.includes("malignant"),
+        device: data.device || "—",
+        classes,
+        metrics: data.metrics && typeof data.metrics === "object" ? data.metrics : null
+      };
+      setText("latencyChip", `${elapsed} ms`);
     } catch (e) {
-      state.systemOnline = false;
-      if (dom.systemStatusDot) dom.systemStatusDot.className = "status-indicator offline";
-      if (dom.systemStatusText) dom.systemStatusText.textContent = "STANDALONE MODE";
-      if (dom.latencyChip) dom.latencyChip.textContent = "Local";
+      state.model = { online: false, loaded: false, mode: "unknown", compatible: false, device: "—", classes: [], metrics: null };
+      setText("latencyChip", "—");
+    }
+    renderStatusDependents();
+  }
+
+  function renderStatusDependents() {
+    const info = describeModel();
+    const dot = $("systemStatusDot");
+    if (dot) dot.className = `status-indicator ${info.trusted ? "online" : "offline"}`;
+    setText("systemStatusText", info.bar);
+    setText("sidebarModelState", info.short);
+    setText("sidebarDeviceName", state.model.device);
+
+    setText("overviewModelState", info.short);
+    setText("overviewModelNote", info.trusted
+      ? "A trained checkpoint is loaded. Output is experimental."
+      : "Model output is hidden unless a trained checkpoint answers.");
+
+    renderWorkspaceModelPanel();
+    renderClassification();
+    renderSources();
+  }
+
+  // ---------------------------------------------------------------------
+  // Tab navigation
+  // ---------------------------------------------------------------------
+  const TAB_TITLES = {
+    overview: "Overview",
+    library: "Case Library",
+    workspace: "Ultrasound Workspace",
+    classification: "Classification",
+    explainability: "Explainability",
+    history: "History / Reports",
+    sources: "Sources & Ethics"
+  };
+
+  function switchTab(tabId, opts = {}) {
+    if (!TAB_TITLES[tabId]) return;
+    state.activeTab = tabId;
+
+    document.querySelectorAll(".sidebar-item[data-tab]").forEach(el => {
+      const active = el.getAttribute("data-tab") === tabId;
+      el.classList.toggle("active", active);
+      if (active) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
+    });
+
+    document.querySelectorAll(".tab-view").forEach(view => {
+      view.classList.toggle("active", view.id === `view-${tabId}`);
+    });
+
+    document.title = `${TAB_TITLES[tabId]} — EchoAtlas`;
+
+    if (tabId === "overview") renderOverview();
+    if (tabId === "library") renderLibrary();
+    if (tabId === "workspace") renderWorkspace();
+    if (tabId === "classification") {
+      const c = state.currentCase;
+      if (c && c.analysis) { c.progress.compared = true; renderJourney(); }
+      renderClassification();
+    }
+    if (tabId === "explainability") renderExplain();
+    if (tabId === "history") { renderHistory(); renderReport(); }
+    if (tabId === "sources") renderSources();
+
+    if (opts.focus !== false) {
+      const heading = document.querySelector(`#view-${tabId} h1`);
+      if (heading) {
+        if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+        heading.focus({ preventScroll: true });
+      }
+      const main = $("mainContent");
+      if (main) main.scrollTop = 0;
     }
   }
 
-  // =========================================================================
-  // POPULATE REAL CLINICAL IMAGES ACROSS PRESET THUMBNAILS
-  // =========================================================================
-  function populatePresetImages() {
-    const map = {
-      presetImgGlioma1: SAMPLES.glioma,
-      presetImgMeningioma: SAMPLES.meningioma,
-      presetImgPituitary: SAMPLES.pituitary,
-      presetImgNoTumor: SAMPLES.notumor,
-      presetImgGlioma2: SAMPLES.glioma2,
-      thumbGlioma1: SAMPLES.glioma,
-      thumbMeningioma: SAMPLES.meningioma,
-      thumbPituitary: SAMPLES.pituitary,
-      thumbNoTumor: SAMPLES.notumor,
-      thumbGlioma2: SAMPLES.glioma2
-    };
-
-    for (let id in map) {
-      const el = document.getElementById(id);
-      if (el) {
-        if (el.tagName === "IMG") {
-          el.src = map[id];
-        } else {
-          el.style.backgroundImage = `url(${map[id]})`;
-          el.style.backgroundSize = "cover";
-          el.style.backgroundPosition = "center";
-        }
-      }
-    }
-  }
-
-  // =========================================================================
-  // FILE SELECTION & DRAG-AND-DROP (REAL SAMPLES & CUSTOM UPLOADS)
-  // =========================================================================
-  if (dom.browseFileBtn) {
-    dom.browseFileBtn.addEventListener("click", () => dom.filePickerInput.click());
-  }
-  if (dom.changeSelectedFileBtn) {
-    dom.changeSelectedFileBtn.addEventListener("click", () => dom.filePickerInput.click());
-  }
-  if (dom.panelChangeScanBtn) {
-    dom.panelChangeScanBtn.addEventListener("click", () => switchTab("upload"));
-  }
-  if (dom.workspaceNewScanBtn) {
-    dom.workspaceNewScanBtn.addEventListener("click", () => switchTab("upload"));
-  }
-
-  if (dom.filePickerInput) {
-    dom.filePickerInput.addEventListener("change", e => {
-      if (e.target.files && e.target.files[0]) {
-        handleSelectedFile(e.target.files[0]);
-      }
-    });
-  }
-
-  document.querySelectorAll("[data-sample]").forEach(el => {
-    el.addEventListener("dragstart", e => {
-      const sampleKey = el.getAttribute("data-sample");
-      e.dataTransfer.setData("text/plain", sampleKey);
-      e.dataTransfer.effectAllowed = "copy";
-    });
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-tab]");
+    if (!el) return;
+    e.preventDefault();
+    switchTab(el.getAttribute("data-tab"));
   });
 
-  if (dom.dropZone) {
-    ["dragenter", "dragover"].forEach(evt => {
-      dom.dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dom.dropZone.classList.add("drag-over");
-      });
-    });
+  const brand = $("brandHomeBtn");
+  brand.addEventListener("click", () => switchTab("overview"));
+  brand.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      switchTab("overview");
+    }
+  });
 
-    ["dragleave", "drop"].forEach(evt => {
-      dom.dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dom.dropZone.classList.remove("drag-over");
-      });
-    });
+  $("quickCaseBtn").addEventListener("click", () => switchTab("library"));
 
-    dom.dropZone.addEventListener("drop", e => {
-      const sampleKey = e.dataTransfer.getData("text/plain");
-      if (sampleKey && SAMPLES[sampleKey]) {
-        const file = dataUrlToFile(SAMPLES[sampleKey], `clinical_${sampleKey}_mri.jpg`);
-        handleSelectedFile(file, SAMPLES[sampleKey]);
-        showToast(`Loaded clinical MRI: ${sampleKey.toUpperCase()}`, "info");
-      } else if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleSelectedFile(e.dataTransfer.files[0]);
-      }
+  const skip = $("skipLink");
+  skip.addEventListener("click", e => {
+    e.preventDefault();
+    const main = $("mainContent");
+    if (main) main.focus();
+  });
+
+  // ---------------------------------------------------------------------
+  // Case library & sidebar
+  // ---------------------------------------------------------------------
+  function refDotClass(label) {
+    if (label === "malignant") return "warning";
+    if (label === "benign") return "success";
+    return "purple";
+  }
+
+  function renderSidebarCases() {
+    const list = $("sidebarCaseList");
+    if (!list) return;
+    list.innerHTML = "";
+    state.cases.slice(0, 5).forEach(c => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sidebar-preset-item";
+      btn.setAttribute("data-open-case", c.id);
+      btn.innerHTML = `
+        <span class="preset-dot ${refDotClass(c.refLabel)}" aria-hidden="true"></span>
+        <span class="preset-lbl">${esc(c.id)}</span>
+        <span class="preset-tag">${esc(c.source === "illustrative" ? "Illustr." : "Dataset")}</span>
+      `;
+      btn.setAttribute("aria-label", `Open case ${c.id}: ${c.title}`);
+      list.appendChild(btn);
     });
   }
 
-  function handleSelectedFile(file, preloadedUrl = null) {
-    if (file.type && !file.type.startsWith("image/")) {
-      showToast("Unsupported image format. Please select JPG or PNG.", "error");
+  function renderLibrary() {
+    const grid = $("libraryGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    state.cases.forEach(c => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sample-scan-btn";
+      btn.setAttribute("data-open-case", c.id);
+      btn.setAttribute("aria-label", `Open case ${c.id}: ${c.title}. Reference label: ${c.refLabel || "none"}.`);
+      const sourceBadge = c.source === "illustrative" ? "Illustrative" : "Public dataset";
+      btn.innerHTML = `
+        <div class="sample-thumb-wrapper">
+          <img class="sample-scan-thumb" src="${esc(c.imageUrl)}" alt="Ultrasound image for ${esc(c.title)}">
+          <span class="badge badge-secondary thumb-badge">${esc(sourceBadge)}</span>
+        </div>
+        <div class="sample-scan-info">
+          <span class="sample-name">${esc(c.id)} &middot; ${esc(c.title)}</span>
+          <span class="sample-meta mono">Reference label: ${esc(c.refLabel ? labelOf(c.refLabel) : "none")}</span>
+          <div class="sample-cta-row">
+            <span class="cta-label">Open case</span>
+            <span class="cta-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+        </div>
+      `;
+      grid.appendChild(btn);
+    });
+
+    setText("libraryCountBadge", `${state.cases.length} case${state.cases.length === 1 ? "" : "s"}`);
+
+    if (state.caseSource === "illustrative") {
+      setHtml("libraryNote", "<strong>Illustrative placeholder cases:</strong> these six pictures are generated for the demo flow &mdash; they are <strong>not real patient scans</strong>, and their labels and outlines are illustrative. Real BrEaST cases appear here when the model API serves them from <code>/api/cases</code>.");
+    } else {
+      setHtml("libraryNote", "<strong>Public dataset cases:</strong> de-identified cases served by the model API (BrEaST / Breast-Lesions-USG, CC BY 4.0). Labels shown are the dataset's reference labels, not diagnoses.");
+    }
+  }
+
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-open-case]");
+    if (!el) return;
+    e.preventDefault();
+    const c = findCase(el.getAttribute("data-open-case"));
+    if (c) openCase(c);
+  });
+
+  // ---------------------------------------------------------------------
+  // Upload (own image)
+  // ---------------------------------------------------------------------
+  const dz = $("dropZone");
+  const picker = $("filePickerInput");
+
+  $("browseFileBtn").addEventListener("click", () => picker.click());
+  $("changeSelectedFileBtn").addEventListener("click", () => picker.click());
+  picker.addEventListener("change", e => {
+    if (e.target.files && e.target.files[0]) handleSelectedFile(e.target.files[0]);
+  });
+
+  ["dragenter", "dragover"].forEach(evt => {
+    dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add("drag-over"); });
+  });
+  ["dragleave", "drop"].forEach(evt => {
+    dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove("drag-over"); });
+  });
+  dz.addEventListener("drop", e => {
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleSelectedFile(e.dataTransfer.files[0]);
+  });
+
+  function handleSelectedFile(file) {
+    if (!file.type || !file.type.startsWith("image/")) {
+      showToast("Unsupported file. Please choose a PNG or JPG image.", "error");
       return;
     }
-
-    state.selectedFile = file;
-
-    const renderPreview = dataUrl => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const dataUrl = evt.target.result;
       const img = new Image();
       img.onload = () => {
-        dom.dropzonePrompt.hidden = true;
-        dom.dropzonePreviewStage.hidden = false;
-        dom.stagePreviewImage.src = dataUrl;
-        dom.stageFilename.textContent = file.name;
-        dom.stageDimensions.textContent = `${img.width} × ${img.height} px`;
-        dom.stageFileSize.textContent = `${(file.size / 1024 || 284).toFixed(1)} KB`;
+        state.pendingUpload = { file, dataUrl, width: img.width, height: img.height };
+        $("dropzonePrompt").hidden = true;
+        $("dropzonePreviewStage").hidden = false;
+        $("stagePreviewImage").src = dataUrl;
+        $("stagePreviewImage").alt = `Preview of ${file.name}`;
+        setText("stageFilename", file.name);
+        setText("stageDimensions", `${img.width} × ${img.height} px`);
+        setText("stageFileSize", `${(file.size / 1024).toFixed(1)} KB`);
       };
       img.src = dataUrl;
     };
-
-    if (preloadedUrl) {
-      renderPreview(preloadedUrl);
-    } else {
-      const reader = new FileReader();
-      reader.onload = evt => renderPreview(evt.target.result);
-      reader.readAsDataURL(file);
-    }
+    reader.readAsDataURL(file);
   }
 
-  // Quick 1-Click Run on Preset Sample Buttons
-  document.querySelectorAll(".btn-sample-run, .sample-scan-btn").forEach(btn => {
-    btn.addEventListener("click", e => {
-      e.stopPropagation();
-      const sampleKey = btn.getAttribute("data-sample");
-      const mappedKey = sampleKey === "glioma2" ? "glioma" : sampleKey;
-      if (SAMPLES[sampleKey]) {
-        const file = dataUrlToFile(SAMPLES[sampleKey], `clinical_${sampleKey}_mri.jpg`);
-        state.selectedFile = file;
-        executeAnalysis(file, SAMPLES[sampleKey], mappedKey, sampleKey);
-      }
-    });
+  $("openUploadBtn").addEventListener("click", () => {
+    const up = state.pendingUpload;
+    if (!up) return;
+    const idNum = state.cases.filter(c => c.source === "upload").length + 1;
+    const c = {
+      id: `UPL-${String(idNum).padStart(3, "0")}`,
+      title: up.file.name,
+      source: "upload",
+      imageUrl: up.dataUrl,
+      annotationUrl: null,
+      refLabel: null,
+      refNote: "Uploaded image: no dataset reference label.",
+      point: "This is your own image. There is no expert annotation or reference label to compare against.",
+      filename: up.file.name,
+      width: up.width,
+      height: up.height,
+      file: up.file,
+      progress: { inspected: false, annotation: false, model: false, compared: false },
+      analysis: null
+    };
+    state.cases.push(c);
+    renderSidebarCases();
+    openCase(c);
   });
 
-  if (dom.startInferenceBtn) {
-    dom.startInferenceBtn.addEventListener("click", () => {
-      if (!state.selectedFile) return;
-      if (dom.stagePreviewImage.src) {
-        executeAnalysis(state.selectedFile, dom.stagePreviewImage.src);
-      } else {
-        const reader = new FileReader();
-        reader.onload = e => {
-          executeAnalysis(state.selectedFile, e.target.result);
-        };
-        reader.readAsDataURL(state.selectedFile);
-      }
-    });
-  }
-
-  // =========================================================================
-  // EXECUTE AI INFERENCE PIPELINE (REAL MRI & GRAD-CAM)
-  // =========================================================================
-  async function executeAnalysis(file, dataUrl, expectedHint = null, sampleKey = null) {
-    if (dom.loadingModal) {
-      dom.loadingModal.hidden = false;
-      dom.loadingModal.style.display = "flex";
-    }
-    if (dom.laserScanline) dom.laserScanline.classList.add("active");
-
-    let timerMs = 0;
-    const interval = setInterval(() => {
-      timerMs += 10;
-      if (dom.loadingTimeCounter) dom.loadingTimeCounter.textContent = `${timerMs} ms`;
-    }, 10);
-
-    setLoadingStep(1);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    let result = null;
-
-    try {
-      setTimeout(() => setLoadingStep(2), 120);
-
-      const res = await fetch(`${API_BASE}/predict`, {
-        method: "POST",
-        body: formData
-      });
-
-      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
-      result = await res.json();
-
-      setLoadingStep(3);
-      setTimeout(() => setLoadingStep(4), 220);
-
-      // Enhance with focal Grad-CAM if standard heatmap is flat
-      if (expectedHint && (!result.gradcam_heatmap || result.confidence < 50)) {
-        result.prediction = expectedHint;
-        result.confidence = 96.4;
-        result.probabilities = { [expectedHint]: 96.4, meningioma: 1.8, notumor: 1.0, pituitary: 0.8 };
-        if (expectedHint === "meningioma") result.probabilities = { meningioma: 95.8, glioma: 2.2, notumor: 1.2, pituitary: 0.8 };
-        if (expectedHint === "pituitary") result.probabilities = { pituitary: 97.1, meningioma: 1.4, glioma: 1.0, notumor: 0.5 };
-        if (expectedHint === "notumor") result.probabilities = { notumor: 98.6, glioma: 0.6, meningioma: 0.5, pituitary: 0.3 };
-        result.gradcam_heatmap = createRealisticHeatmap(sampleKey || expectedHint);
-      }
-
-    } catch (err) {
-      console.warn("Backend offline or endpoint fallback:", err);
-      const chosenClass = expectedHint || "glioma";
-      result = generateCalibratedPrediction(chosenClass, sampleKey || chosenClass);
-    } finally {
-      clearInterval(interval);
-      setTimeout(() => {
-        if (dom.loadingModal) {
-          dom.loadingModal.hidden = true;
-          dom.loadingModal.style.display = "none";
-        }
-        if (dom.laserScanline) dom.laserScanline.classList.remove("active");
-
-        const studyId = `MRI-2026-${String(state.studiesHistory.length + 1).padStart(3, "0")}`;
-        const newStudy = {
-          id: studyId,
-          filename: file.name || `study_${studyId}.jpg`,
-          dataUrl: dataUrl,
-          prediction: result.prediction,
-          confidence: result.confidence,
-          probabilities: result.probabilities,
-          inferenceTimeMs: result.inference_time_ms || 34.2,
-          gradcamHeatmap: result.gradcam_heatmap || createRealisticHeatmap(sampleKey || result.prediction),
-          timestamp: new Date().toLocaleString()
-        };
-
-        state.currentStudy = newStudy;
-        state.studiesHistory.unshift(newStudy);
-        saveHistory();
-
-        showToast(`AI Analysis Complete: ${CLASS_META[newStudy.prediction]?.label || newStudy.prediction} (${newStudy.confidence}%)`, "success");
-        switchTab("workspace");
-      }, 450);
-    }
-  }
-
-  function setLoadingStep(stepNum) {
-    [dom.lStep1, dom.lStep2, dom.lStep3, dom.lStep4].forEach((el, idx) => {
-      if (!el) return;
-      if (idx + 1 < stepNum) {
-        el.className = "loading-step-item done";
-        el.querySelector(".step-check").innerHTML = "&check;";
-      } else if (idx + 1 === stepNum) {
-        el.className = "loading-step-item active";
-        el.querySelector(".step-check").innerHTML = "&bull;";
-      } else {
-        el.className = "loading-step-item";
-        el.querySelector(".step-check").innerHTML = "&bull;";
-      }
-    });
-  }
-
-  function generateCalibratedPrediction(cls, sampleKey) {
-    const probs = { glioma: 1.2, meningioma: 1.5, notumor: 0.8, pituitary: 0.5 };
-    probs[cls] = 96.4;
-    const sum = Object.values(probs).reduce((a, b) => a + b, 0);
-    for (let k in probs) probs[k] = parseFloat(((probs[k] / sum) * 100).toFixed(2));
-
-    return {
-      prediction: cls,
-      confidence: probs[cls],
-      probabilities: probs,
-      inference_time_ms: 32.8,
-      gradcam_available: true,
-      gradcam_heatmap: createRealisticHeatmap(sampleKey || cls)
-    };
-  }
-
-  // =========================================================================
-  // UPDATE WORKSPACE, EXPLAINABILITY & REPORT VIEWS
-  // =========================================================================
-  function updateWorkspaceView() {
-    const study = state.currentStudy;
-    if (!study) {
-      if (dom.viewerEmptyState) dom.viewerEmptyState.hidden = false;
-      if (dom.mriViewerImage) dom.mriViewerImage.style.display = "none";
-      if (dom.mriViewerHeatmap) dom.mriViewerHeatmap.style.display = "none";
-      return;
-    }
-
-    if (dom.viewerEmptyState) dom.viewerEmptyState.hidden = true;
-    if (dom.mriViewerImage) dom.mriViewerImage.style.display = "block";
-    if (dom.mriViewerHeatmap) dom.mriViewerHeatmap.style.display = "block";
-
-    if (dom.studyThumbnail) dom.studyThumbnail.src = study.dataUrl;
-    if (dom.studyIdText) dom.studyIdText.textContent = study.id;
-    if (dom.studyFileName) dom.studyFileName.textContent = study.filename;
-    if (dom.studyStatusPill) dom.studyStatusPill.textContent = "Analysis Complete";
-
-    if (dom.mriViewerImage) dom.mriViewerImage.src = study.dataUrl;
-    if (dom.mriViewerHeatmap) dom.mriViewerHeatmap.src = study.gradcamHeatmap;
-
-    applyViewerTransforms();
-
-    const meta = CLASS_META[study.prediction] || {
-      label: study.prediction,
-      categoryBadge: "Classification",
-      badgeClass: "badge-cyan",
-      color: "#39D5FF"
-    };
-
-    if (dom.verdictClassName) dom.verdictClassName.textContent = meta.label;
-    if (dom.verdictCategoryBadge) {
-      dom.verdictCategoryBadge.textContent = meta.categoryBadge;
-      dom.verdictCategoryBadge.className = `verdict-category-badge ${meta.badgeClass}`;
-    }
-    if (dom.verdictConfidenceVal) dom.verdictConfidenceVal.textContent = `${study.confidence.toFixed(1)}%`;
-    if (dom.verdictConfidenceFill) dom.verdictConfidenceFill.style.width = `${study.confidence}%`;
-
-    if (dom.probBarsList) {
-      dom.probBarsList.innerHTML = "";
-      const sorted = Object.entries(study.probabilities).sort((a, b) => b[1] - a[1]);
-
-      sorted.forEach(([clsKey, probVal]) => {
-        const clsMeta = CLASS_META[clsKey] || { label: clsKey, color: "#39D5FF" };
-        const row = document.createElement("div");
-        row.className = "prob-row";
-        row.innerHTML = `
-          <div class="prob-row-header">
-            <span class="prob-class-name">${clsMeta.label}</span>
-            <span class="prob-class-val mono">${probVal.toFixed(1)}%</span>
-          </div>
-          <div class="prob-bar-track">
-            <div class="prob-bar-fill fill-${clsKey}" style="width: ${probVal}%"></div>
-          </div>
-        `;
-        dom.probBarsList.appendChild(row);
-      });
-    }
-
-    if (dom.quickCamHeatmap) dom.quickCamHeatmap.src = study.gradcamHeatmap;
-    if (dom.explainOriginalImg) dom.explainOriginalImg.src = study.dataUrl;
-    if (dom.explainHeatmapImg) dom.explainHeatmapImg.src = study.gradcamHeatmap;
-    if (dom.explainOverlayBaseImg) dom.explainOverlayBaseImg.src = study.dataUrl;
-    if (dom.explainOverlayHeatmapImg) dom.explainOverlayHeatmapImg.src = study.gradcamHeatmap;
-
-    if (dom.repStudyId) dom.repStudyId.textContent = study.id;
-    if (dom.repDate) dom.repDate.textContent = study.timestamp;
-    if (dom.repOriginalImg) dom.repOriginalImg.src = study.dataUrl;
-    if (dom.repGradcamImg) dom.repGradcamImg.src = study.gradcamHeatmap;
-    if (dom.repPredictedClass) dom.repPredictedClass.textContent = meta.label;
-    if (dom.repConfidence) dom.repConfidence.textContent = `${study.confidence.toFixed(1)}%`;
-    if (dom.repLatency) dom.repLatency.textContent = `${study.inferenceTimeMs} ms`;
-
-    if (dom.repProbTableBody) {
-      dom.repProbTableBody.innerHTML = "";
-      const sorted = Object.entries(study.probabilities).sort((a, b) => b[1] - a[1]);
-      sorted.forEach(([clsKey, probVal]) => {
-        const clsMeta = CLASS_META[clsKey] || { label: clsKey };
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${clsMeta.label}</strong></td>
-          <td class="mono">${probVal.toFixed(2)}%</td>
-          <td>
-            <div style="height:6px; background:#162231; border-radius:3px; overflow:hidden; width:120px;">
-              <div style="height:100%; width:${probVal}%; background:${clsMeta.color || "#39D5FF"};"></div>
-            </div>
-          </td>
-        `;
-        dom.repProbTableBody.appendChild(tr);
-      });
-    }
-
-    renderOverviewRecent();
-    renderHistoryTable();
-  }
-
-  // =========================================================================
-  // VIEWER CONTROLS
-  // =========================================================================
-  function applyViewerTransforms() {
+  // ---------------------------------------------------------------------
+  // Opening a case & history
+  // ---------------------------------------------------------------------
+  function resetViewer() {
     const v = state.viewer;
-    const transform = `scale(${v.zoom})`;
-    const filter = `brightness(${v.brightness}%) contrast(${v.contrast}%)`;
+    v.zoom = 1.0;
+    v.brightness = 100;
+    v.contrast = 100;
+    v.annotationOpacity = 85;
+    v.modelOpacity = 70;
+    v.showAnnotation = false;
+    v.showModel = false;
+    $("brightnessSlider").value = 100;
+    $("contrastSlider").value = 100;
+    $("annotationOpacitySlider").value = 85;
+    $("modelOpacitySlider").value = 70;
+  }
 
-    if (dom.mriViewerImage) {
-      dom.mriViewerImage.style.transform = transform;
-      dom.mriViewerImage.style.filter = filter;
+  function openCase(c) {
+    state.currentCase = c;
+    resetViewer();
+    if (c.analysis && c.analysis.trained && c.analysis.maskUrl) {
+      // keep model mask available but hidden until the learner toggles it
     }
 
-    if (dom.mriViewerHeatmap) {
-      dom.mriViewerHeatmap.style.transform = transform;
-      dom.mriViewerHeatmap.style.opacity = v.camOpacity / 100;
+    if (!state.history.some(h => h.caseId === c.id)) {
+      addHistoryEntry(c, "viewed");
     }
-
-    if (dom.hudZoomText) {
-      dom.hudZoomText.textContent = `ZOOM: ${Math.round(v.zoom * 100)}%`;
-    }
+    switchTab("workspace");
   }
 
-  if (dom.zoomInBtn) {
-    dom.zoomInBtn.addEventListener("click", () => {
-      state.viewer.zoom = Math.min(state.viewer.zoom + 0.25, 3.0);
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.zoomOutBtn) {
-    dom.zoomOutBtn.addEventListener("click", () => {
-      state.viewer.zoom = Math.max(state.viewer.zoom - 0.25, 0.5);
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.zoomFitBtn) {
-    dom.zoomFitBtn.addEventListener("click", () => {
-      state.viewer.zoom = 1.0;
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.resetViewerBtn) {
-    dom.resetViewerBtn.addEventListener("click", () => {
-      state.viewer = {
-        zoom: 1.0,
-        brightness: 100,
-        contrast: 100,
-        camOpacity: 0,
-        currentSlice: 1,
-        totalSlices: 4
+  function makeThumb(url) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const w = 256;
+          const h = Math.max(1, Math.round((img.height / img.width) * w));
+          const cv = document.createElement("canvas");
+          cv.width = w;
+          cv.height = h;
+          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL("image/jpeg", 0.7));
+        } catch (e) {
+          resolve(null);
+        }
       };
-      if (dom.brightnessSlider) dom.brightnessSlider.value = 100;
-      if (dom.contrastSlider) dom.contrastSlider.value = 100;
-      if (dom.camOpacitySlider) dom.camOpacitySlider.value = 0;
-      if (dom.sliceSlider) dom.sliceSlider.value = 1;
-      if (dom.sliceCounterText) dom.sliceCounterText.textContent = "SLICE 01 / 04";
-      applyViewerTransforms();
+      img.onerror = () => resolve(null);
+      img.src = url;
     });
   }
 
-  if (dom.fullscreenViewerBtn) {
-    dom.fullscreenViewerBtn.addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        dom.mriViewport?.requestFullscreen?.().catch(() => {});
-      } else {
-        document.exitFullscreen?.().catch(() => {});
-      }
-    });
-  }
-
-  if (dom.brightnessSlider) {
-    dom.brightnessSlider.addEventListener("input", e => {
-      state.viewer.brightness = e.target.value;
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.contrastSlider) {
-    dom.contrastSlider.addEventListener("input", e => {
-      state.viewer.contrast = e.target.value;
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.camOpacitySlider) {
-    dom.camOpacitySlider.addEventListener("input", e => {
-      state.viewer.camOpacity = e.target.value;
-      applyViewerTransforms();
-    });
-  }
-
-  if (dom.sliceSlider) {
-    dom.sliceSlider.addEventListener("input", e => {
-      const slice = parseInt(e.target.value, 10);
-      state.viewer.currentSlice = slice;
-      if (dom.sliceCounterText) dom.sliceCounterText.textContent = `SLICE ${String(slice).padStart(2, "0")} / 04`;
-    });
-  }
-
-  if (dom.prevSliceBtn) {
-    dom.prevSliceBtn.addEventListener("click", () => {
-      if (state.viewer.currentSlice > 1) {
-        state.viewer.currentSlice--;
-        if (dom.sliceSlider) dom.sliceSlider.value = state.viewer.currentSlice;
-        if (dom.sliceCounterText) dom.sliceCounterText.textContent = `SLICE ${String(state.viewer.currentSlice).padStart(2, "0")} / 04`;
-      }
-    });
-  }
-
-  if (dom.nextSliceBtn) {
-    dom.nextSliceBtn.addEventListener("click", () => {
-      if (state.viewer.currentSlice < state.viewer.totalSlices) {
-        state.viewer.currentSlice++;
-        if (dom.sliceSlider) dom.sliceSlider.value = state.viewer.currentSlice;
-        if (dom.sliceCounterText) dom.sliceCounterText.textContent = `SLICE ${String(state.viewer.currentSlice).padStart(2, "0")} / 04`;
-      }
-    });
-  }
-
-  if (dom.explainOpacitySlider) {
-    dom.explainOpacitySlider.addEventListener("input", e => {
-      const val = e.target.value;
-      if (dom.explainOpacityVal) dom.explainOpacityVal.textContent = `${val}%`;
-      if (dom.explainOverlayHeatmapImg) dom.explainOverlayHeatmapImg.style.opacity = val / 100;
-    });
-  }
-
-  // =========================================================================
-  // SCAN HISTORY & INITIAL REAL MRI CLINICAL SEEDS
-  // =========================================================================
-  function loadInitialHistory() {
-    // Clean old session storage containing dummy vector graphics
-    localStorage.removeItem("neuroscan_studies");
-
-    state.studiesHistory = [
-      {
-        id: "MRI-2026-004",
-        filename: "clinical_glioma_case204.jpg",
-        dataUrl: SAMPLES.glioma,
-        prediction: "glioma",
-        confidence: 96.8,
-        probabilities: { glioma: 96.8, meningioma: 1.8, notumor: 0.9, pituitary: 0.5 },
-        inferenceTimeMs: 32.4,
-        gradcamHeatmap: createRealisticHeatmap("glioma"),
-        timestamp: "27 Sep 2026 22:45"
-      },
-      {
-        id: "MRI-2026-003",
-        filename: "clinical_meningioma_case118.jpg",
-        dataUrl: SAMPLES.meningioma,
-        prediction: "meningioma",
-        confidence: 94.2,
-        probabilities: { meningioma: 94.2, glioma: 3.4, notumor: 1.6, pituitary: 0.8 },
-        inferenceTimeMs: 34.1,
-        gradcamHeatmap: createRealisticHeatmap("meningioma"),
-        timestamp: "27 Sep 2026 21:10"
-      },
-      {
-        id: "MRI-2026-002",
-        filename: "clinical_control_case044.jpg",
-        dataUrl: SAMPLES.notumor,
-        prediction: "notumor",
-        confidence: 98.4,
-        probabilities: { notumor: 98.4, glioma: 0.8, meningioma: 0.5, pituitary: 0.3 },
-        inferenceTimeMs: 29.8,
-        gradcamHeatmap: createRealisticHeatmap("notumor"),
-        timestamp: "27 Sep 2026 19:30"
-      },
-      {
-        id: "MRI-2026-001",
-        filename: "clinical_pituitary_case092.jpg",
-        dataUrl: SAMPLES.pituitary,
-        prediction: "pituitary",
-        confidence: 95.6,
-        probabilities: { pituitary: 95.6, meningioma: 2.2, glioma: 1.4, notumor: 0.8 },
-        inferenceTimeMs: 35.6,
-        gradcamHeatmap: createRealisticHeatmap("pituitary"),
-        timestamp: "27 Sep 2026 18:00"
-      }
-    ];
-
+  function addHistoryEntry(c, action, analysis) {
+    state.historyCounter += 1;
+    const entry = {
+      id: `EA-2026-${String(state.historyCounter).padStart(3, "0")}`,
+      caseId: c.id,
+      title: c.title,
+      source: c.source,
+      action,
+      ts: new Date().toLocaleString(),
+      refLabel: c.refLabel,
+      trained: !!(analysis && analysis.trained),
+      mode: analysis ? analysis.mode : null,
+      prediction: analysis && analysis.trained ? analysis.prediction : null,
+      confidence: analysis && analysis.trained ? analysis.confidence : null,
+      probabilities: analysis && analysis.trained ? analysis.probabilities : null,
+      latencyMs: analysis ? analysis.latencyMs : null,
+      note: analysis ? analysis.note : null,
+      thumb: null
+    };
+    state.history.unshift(entry);
+    if (analysis && analysis.maskUrl) state.maskCache[entry.id] = analysis.maskUrl;
+    state.reportEntryId = entry.id;
     saveHistory();
-    state.currentStudy = state.studiesHistory[0];
-    updateWorkspaceView();
+
+    makeThumb(c.imageUrl).then(t => {
+      if (t) {
+        entry.thumb = t;
+        saveHistory();
+        if (state.activeTab === "history") { renderHistory(); renderReport(); }
+      }
+    });
+    return entry;
   }
 
   function saveHistory() {
     try {
-      localStorage.setItem("neuroscan_studies", JSON.stringify(state.studiesHistory.slice(0, 30)));
-    } catch (e) {}
-    if (dom.overviewScanCount) dom.overviewScanCount.textContent = state.studiesHistory.length;
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0, 30)));
+    } catch (e) { /* storage full or unavailable */ }
+    setText("overviewSessionCount", String(state.history.length));
   }
 
-  function renderOverviewRecent() {
-    if (!dom.overviewRecentTbody) return;
-    dom.overviewRecentTbody.innerHTML = "";
+  function loadHistory() {
+    localStorage.removeItem("neuroscan_studies");
+    try {
+      const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      if (Array.isArray(raw)) state.history = raw;
+    } catch (e) {
+      state.history = [];
+    }
+    const nums = state.history.map(h => parseInt(String(h.id).split("-").pop(), 10)).filter(n => !isNaN(n));
+    state.historyCounter = nums.length ? Math.max(...nums) : 0;
+    state.reportEntryId = state.history.length ? state.history[0].id : null;
+    setText("overviewSessionCount", String(state.history.length));
+  }
 
-    state.studiesHistory.slice(0, 5).forEach(item => {
-      const meta = CLASS_META[item.prediction] || { label: item.prediction, badgeClass: "badge-cyan" };
+  // ---------------------------------------------------------------------
+  // Overview
+  // ---------------------------------------------------------------------
+  function modelOutputText(entry) {
+    if (entry.action === "viewed") return "—";
+    if (entry.trained && entry.prediction) {
+      return `${labelOf(entry.prediction)} (${entry.confidence.toFixed(1)}%)`;
+    }
+    return "Demo-only (no output shown)";
+  }
+
+  function renderOverview() {
+    setText("overviewCaseCount", String(state.cases.length));
+    setText("overviewCaseSource", state.caseSource === "illustrative"
+      ? "Illustrative placeholders (not real scans)"
+      : "Public dataset cases");
+
+    const tbody = $("overviewRecentTbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (state.history.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">No activity yet. Open a case from the library.</td></tr>`;
+      return;
+    }
+    state.history.slice(0, 5).forEach(item => {
       const tr = document.createElement("tr");
+      const canOpen = !!findCase(item.caseId);
       tr.innerHTML = `
-        <td class="mono"><strong>${item.id}</strong></td>
-        <td><span class="badge ${meta.badgeClass}">${meta.label}</span></td>
-        <td class="mono">${item.confidence.toFixed(1)}%</td>
-        <td class="mono">${item.inferenceTimeMs} ms</td>
-        <td>
-          <button class="btn-link" data-load-study="${item.id}">Open in Viewer &rarr;</button>
-        </td>
+        <td class="mono"><strong>${esc(item.id)}</strong></td>
+        <td>${esc(item.caseId)}</td>
+        <td>${item.action === "model" ? "Model run" : "Case opened"}</td>
+        <td class="mono">${esc(modelOutputText(item))}</td>
+        <td>${canOpen
+          ? `<button class="btn-link" type="button" data-open-case="${esc(item.caseId)}">Open &rarr;</button>`
+          : `<span class="mono">Not stored</span>`}</td>
       `;
-      dom.overviewRecentTbody.appendChild(tr);
-    });
-
-    dom.overviewRecentTbody.querySelectorAll("[data-load-study]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-load-study");
-        const found = state.studiesHistory.find(s => s.id === id);
-        if (found) {
-          state.currentStudy = found;
-          updateWorkspaceView();
-          switchTab("workspace");
-        }
-      });
+      tbody.appendChild(tr);
     });
   }
 
-  function renderHistoryTable(filterCls = "all", searchQuery = "") {
-    if (!dom.historyTableBody) return;
-    dom.historyTableBody.innerHTML = "";
+  // ---------------------------------------------------------------------
+  // Workspace
+  // ---------------------------------------------------------------------
+  const viewerImg = $("viewerImage");
+  const annLayer = $("annotationLayer");
+  const maskLayer = $("modelMaskLayer");
 
-    let list = state.studiesHistory;
+  function currentMaskUrl() {
+    const c = state.currentCase;
+    return c && c.analysis && c.analysis.trained ? c.analysis.maskUrl : null;
+  }
 
-    if (filterCls !== "all") {
-      list = list.filter(item => item.prediction === filterCls);
+  function syncOverlays() {
+    if (!viewerImg.naturalWidth) return;
+    const w = viewerImg.clientWidth;
+    const h = viewerImg.clientHeight;
+    [annLayer, maskLayer].forEach(el => {
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.maxWidth = "none";
+      el.style.maxHeight = "none";
+    });
+  }
+
+  viewerImg.addEventListener("load", () => {
+    syncOverlays();
+    setText("hudDimText", `${viewerImg.naturalWidth} × ${viewerImg.naturalHeight} px`);
+  });
+  window.addEventListener("resize", syncOverlays);
+
+  function applyViewerTransforms() {
+    const v = state.viewer;
+    const transform = `scale(${v.zoom})`;
+    viewerImg.style.transform = transform;
+    viewerImg.style.filter = `brightness(${v.brightness}%) contrast(${v.contrast}%)`;
+
+    annLayer.style.transform = transform;
+    annLayer.style.opacity = v.showAnnotation ? v.annotationOpacity / 100 : 0;
+    maskLayer.style.transform = transform;
+    maskLayer.style.opacity = v.showModel ? v.modelOpacity / 100 : 0;
+
+    setText("hudZoomText", `ZOOM: ${Math.round(v.zoom * 100)}%`);
+
+    const annBtn = $("toggleAnnotationBtn");
+    const mskBtn = $("toggleModelBtn");
+    annBtn.classList.toggle("active", v.showAnnotation);
+    annBtn.setAttribute("aria-pressed", String(v.showAnnotation));
+    mskBtn.classList.toggle("active", v.showModel);
+    mskBtn.setAttribute("aria-pressed", String(v.showModel));
+  }
+
+  function markInspected() {
+    const c = state.currentCase;
+    if (c && !c.progress.inspected) {
+      c.progress.inspected = true;
+      renderJourney();
     }
+  }
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(item => item.id.toLowerCase().includes(q) || item.prediction.toLowerCase().includes(q));
-    }
+  function renderJourney() {
+    const c = state.currentCase;
+    const steps = [
+      { id: "jStep1", done: !!c, label: "1. Case selected" },
+      { id: "jStep2", done: !!(c && c.progress.inspected), label: "2. Inspect the scan (zoom or adjust)" },
+      {
+        id: "jStep3",
+        done: !!(c && c.progress.annotation),
+        label: c && !c.annotationUrl ? "3. Expert annotation (none for this case)" : "3. Compare expert annotation"
+      },
+      { id: "jStep4", done: !!(c && c.progress.model), label: "4. Run / review model" },
+      { id: "jStep5", done: !!(c && c.progress.compared), label: "5. Compare label vs. output" }
+    ];
+    steps.forEach(s => {
+      const el = $(s.id);
+      if (!el) return;
+      el.className = `timeline-step${s.done ? " done" : ""}`;
+      el.querySelector(".step-icon").innerHTML = s.done ? "&check;" : "&bull;";
+      el.querySelector(".step-label").textContent = s.label;
+    });
+  }
 
-    if (list.length === 0) {
-      if (dom.emptyHistoryState) dom.emptyHistoryState.hidden = false;
+  function renderWorkspace() {
+    const c = state.currentCase;
+    const empty = $("viewerEmptyState");
+
+    if (!c) {
+      empty.hidden = false;
+      viewerImg.style.display = "none";
+      annLayer.style.display = "none";
+      maskLayer.style.display = "none";
+      setText("caseIdText", "—");
+      setText("caseTitleText", "No case selected");
+      setText("caseSourceText", "—");
+      setText("caseAnnotationText", "—");
+      setText("caseRefLabelText", "—");
+      setText("caseFileName", "—");
+      setText("caseTeachingPoint", "");
+      setText("hudSourceText", "—");
+      $("caseThumbnail").removeAttribute("src");
+      $("caseThumbnail").alt = "";
+      $("toggleAnnotationBtn").disabled = true;
+      $("toggleModelBtn").disabled = true;
+      $("runModelBtn").disabled = true;
+      renderJourney();
+      renderWorkspaceModelPanel();
+      applyViewerTransforms();
       return;
     }
 
-    if (dom.emptyHistoryState) dom.emptyHistoryState.hidden = true;
+    empty.hidden = true;
+    viewerImg.style.display = "block";
+    if (viewerImg.getAttribute("src") !== c.imageUrl) viewerImg.src = c.imageUrl;
+    viewerImg.alt = `Breast ultrasound image, case ${c.id}: ${c.title}`;
 
-    list.forEach(item => {
-      const meta = CLASS_META[item.prediction] || { label: item.prediction, badgeClass: "badge-cyan" };
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="mono"><strong>${item.id}</strong></td>
-        <td>${item.timestamp}</td>
-        <td>
-          <img src="${item.dataUrl}" alt="Thumb" style="width:32px; height:32px; border-radius:4px; object-fit:cover; border:1px solid #243447;">
-        </td>
-        <td><span class="badge ${meta.badgeClass}">${meta.label}</span></td>
-        <td class="mono">${item.confidence.toFixed(1)}%</td>
-        <td class="mono">BrainTumorCNN</td>
-        <td><span class="badge badge-success">Complete</span></td>
-        <td>
-          <button class="btn btn-secondary-sm" data-history-load="${item.id}">Open</button>
-        </td>
-      `;
-      dom.historyTableBody.appendChild(tr);
-    });
+    const srcLabel = c.source === "illustrative" ? "Illustrative placeholder" : c.source === "upload" ? "Your upload" : "Public dataset";
+    $("caseThumbnail").src = c.imageUrl;
+    $("caseThumbnail").alt = `Thumbnail of case ${c.id}`;
+    setText("caseSourceBadge", c.source === "illustrative" ? "ILLUSTR." : c.source === "upload" ? "UPLOAD" : "DATASET");
+    setText("caseIdText", c.id);
+    setText("caseTitleText", c.title);
+    setText("caseSourceText", srcLabel);
+    setText("caseAnnotationText", c.annotationUrl ? (c.source === "illustrative" ? "Illustrative outline (placeholder)" : "Expert annotation available") : "None for this case");
+    setText("caseRefLabelText", c.refLabel ? `${labelOf(c.refLabel)} (dataset label)` : "None");
+    setText("caseFileName", c.filename || "—");
+    setText("caseTeachingPoint", c.point || "");
+    setText("hudSourceText", srcLabel.toUpperCase());
 
-    dom.historyTableBody.querySelectorAll("[data-history-load]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-history-load");
-        const found = state.studiesHistory.find(s => s.id === id);
-        if (found) {
-          state.currentStudy = found;
-          updateWorkspaceView();
-          switchTab("workspace");
-        }
-      });
-    });
+    // Annotation layer
+    if (c.annotationUrl) {
+      annLayer.style.display = "block";
+      if (annLayer.getAttribute("src") !== c.annotationUrl) annLayer.src = c.annotationUrl;
+    } else {
+      annLayer.style.display = "none";
+      annLayer.removeAttribute("src");
+      state.viewer.showAnnotation = false;
+    }
+
+    // Model layer
+    const maskUrl = currentMaskUrl();
+    if (maskUrl) {
+      maskLayer.style.display = "block";
+      if (maskLayer.getAttribute("src") !== maskUrl) maskLayer.src = maskUrl;
+    } else {
+      maskLayer.style.display = "none";
+      maskLayer.removeAttribute("src");
+      state.viewer.showModel = false;
+    }
+
+    $("toggleAnnotationBtn").disabled = false;
+    $("toggleModelBtn").disabled = false;
+    $("runModelBtn").disabled = false;
+
+    renderJourney();
+    renderWorkspaceModelPanel();
+    applyViewerTransforms();
+    syncOverlays();
   }
 
-  if (dom.historySearchInput) {
-    dom.historySearchInput.addEventListener("input", e => {
-      const activeFilter = dom.historyFilterPills?.querySelector(".active")?.getAttribute("data-filter") || "all";
-      renderHistoryTable(activeFilter, e.target.value);
-    });
+  function renderWorkspaceModelPanel() {
+    const c = state.currentCase;
+    const info = describeModel();
+    const notice = $("wsModeNotice");
+    if (notice) notice.innerHTML = info.notice;
+
+    const chip = $("analysisStatusChip");
+    const label = $("analysisStatusLabel");
+    const card = $("wsVerdictCard");
+
+    setText("wsRefLabel", c && c.refLabel ? `${labelOf(c.refLabel)} (dataset)` : "—");
+
+    if (!c || !c.analysis) {
+      if (label) label.textContent = "Not run";
+      if (chip) chip.className = "status-indicator-chip";
+      if (card) card.hidden = true;
+      setText("wsModelOutput", c ? "Not run yet" : "—");
+      return;
+    }
+
+    const a = c.analysis;
+    if (a.trained) {
+      if (label) label.textContent = "Trained model";
+      card.hidden = false;
+      setText("wsVerdictName", labelOf(a.prediction));
+      const badge = $("wsVerdictBadge");
+      badge.className = `verdict-category-badge ${(CLASS_META[a.prediction] || {}).badgeClass || "badge-cyan"}`;
+      badge.textContent = "Experimental";
+      setText("wsVerdictConf", `${a.confidence.toFixed(1)}%`);
+      $("wsVerdictFill").style.width = `${Math.max(0, Math.min(100, a.confidence))}%`;
+      setText("wsModelOutput", `${labelOf(a.prediction)} (${a.confidence.toFixed(1)}%)`);
+    } else {
+      if (label) label.textContent = "Demo-only";
+      card.hidden = true;
+      setText("wsModelOutput", "Demo-only — no output shown");
+    }
   }
 
-  if (dom.historyFilterPills) {
-    dom.historyFilterPills.querySelectorAll(".filter-pill").forEach(pill => {
-      pill.addEventListener("click", () => {
-        dom.historyFilterPills.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
-        pill.classList.add("active");
-        const filter = pill.getAttribute("data-filter");
-        renderHistoryTable(filter, dom.historySearchInput?.value || "");
-      });
-    });
+  // Viewer controls
+  $("zoomInBtn").addEventListener("click", () => zoomBy(0.25));
+  $("zoomOutBtn").addEventListener("click", () => zoomBy(-0.25));
+  $("zoomFitBtn").addEventListener("click", () => { state.viewer.zoom = 1.0; applyViewerTransforms(); });
+  $("resetViewerBtn").addEventListener("click", () => {
+    const keepA = state.viewer.showAnnotation;
+    const keepM = state.viewer.showModel;
+    resetViewer();
+    state.viewer.showAnnotation = keepA;
+    state.viewer.showModel = keepM;
+    applyViewerTransforms();
+  });
+  $("fullscreenViewerBtn").addEventListener("click", () => {
+    const vp = $("mriViewport");
+    if (!document.fullscreenElement) {
+      vp.requestFullscreen && vp.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen && document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  function zoomBy(delta) {
+    state.viewer.zoom = Math.max(0.5, Math.min(3.0, state.viewer.zoom + delta));
+    applyViewerTransforms();
+    markInspected();
   }
 
-  if (dom.clearHistoryBtn) {
-    dom.clearHistoryBtn.addEventListener("click", () => {
-      if (confirm("Are you sure you want to clear session study history?")) {
-        state.studiesHistory = [];
-        saveHistory();
-        renderHistoryTable();
-        showToast("Study history cleared", "info");
+  $("brightnessSlider").addEventListener("input", e => {
+    state.viewer.brightness = Number(e.target.value);
+    applyViewerTransforms();
+    markInspected();
+  });
+  $("contrastSlider").addEventListener("input", e => {
+    state.viewer.contrast = Number(e.target.value);
+    applyViewerTransforms();
+    markInspected();
+  });
+  $("annotationOpacitySlider").addEventListener("input", e => {
+    state.viewer.annotationOpacity = Number(e.target.value);
+    applyViewerTransforms();
+  });
+  $("modelOpacitySlider").addEventListener("input", e => {
+    state.viewer.modelOpacity = Number(e.target.value);
+    applyViewerTransforms();
+  });
+
+  function toggleAnnotation() {
+    const c = state.currentCase;
+    if (!c) return;
+    if (!c.annotationUrl) {
+      showToast("This case has no dataset annotation.", "info");
+      return;
+    }
+    state.viewer.showAnnotation = !state.viewer.showAnnotation;
+    if (state.viewer.showAnnotation) c.progress.annotation = true;
+    applyViewerTransforms();
+    renderJourney();
+  }
+
+  function toggleModel() {
+    const c = state.currentCase;
+    if (!c) return;
+    if (!currentMaskUrl()) {
+      showToast("No model mask yet. Only a trained checkpoint produces one — run the experimental model first.", "info");
+      return;
+    }
+    state.viewer.showModel = !state.viewer.showModel;
+    applyViewerTransforms();
+  }
+
+  $("toggleAnnotationBtn").addEventListener("click", toggleAnnotation);
+  $("toggleModelBtn").addEventListener("click", toggleModel);
+
+  $("panelChangeCaseBtn").addEventListener("click", () => switchTab("library"));
+  $("workspaceNewCaseBtn").addEventListener("click", () => switchTab("library"));
+  $("goClassificationBtn").addEventListener("click", () => switchTab("classification"));
+  $("goExplainBtn").addEventListener("click", () => switchTab("explainability"));
+  $("runModelBtn").addEventListener("click", runModel);
+  $("clsRunBtn").addEventListener("click", runModel);
+
+  document.addEventListener("keydown", e => {
+    if (state.activeTab !== "workspace") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomBy(0.25); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomBy(-0.25); }
+    else if (e.key === "0") { e.preventDefault(); state.viewer.zoom = 1.0; applyViewerTransforms(); }
+    else if (e.key === "a" || e.key === "A") { e.preventDefault(); toggleAnnotation(); }
+    else if (e.key === "m" || e.key === "M") { e.preventDefault(); toggleModel(); }
+  });
+
+  // ---------------------------------------------------------------------
+  // Running the model (honest handling of demo / mismatched output)
+  // ---------------------------------------------------------------------
+  function setLoadingStep(stepNum) {
+    ["lStep1", "lStep2", "lStep3", "lStep4"].forEach((id, idx) => {
+      const el = $(id);
+      if (!el) return;
+      const check = el.querySelector(".step-check");
+      if (idx + 1 < stepNum) {
+        el.className = "loading-step-item done";
+        check.innerHTML = "&check;";
+      } else if (idx + 1 === stepNum) {
+        el.className = "loading-step-item active";
+        check.innerHTML = "&bull;";
+      } else {
+        el.className = "loading-step-item";
+        check.innerHTML = "&bull;";
       }
     });
   }
 
-  if (dom.generateReportQuickBtn) {
-    dom.generateReportQuickBtn.addEventListener("click", () => switchTab("reports"));
+  function showLoading(show) {
+    const modal = $("loadingModal");
+    modal.hidden = !show;
+    modal.style.display = show ? "flex" : "none";
   }
 
-  if (dom.printReportBtn) {
-    dom.printReportBtn.addEventListener("click", () => window.print());
+  async function caseToBlob(c) {
+    if (c.file) return c.file;
+    const res = await fetch(c.imageUrl);
+    return await res.blob();
   }
 
-  if (dom.exportJsonReportBtn) {
-    dom.exportJsonReportBtn.addEventListener("click", () => {
-      if (!state.currentStudy) return;
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.currentStudy, null, 2));
-      const dl = document.createElement("a");
-      dl.setAttribute("href", dataStr);
-      dl.setAttribute("download", `${state.currentStudy.id}_report.json`);
-      document.body.appendChild(dl);
-      dl.click();
-      dl.remove();
-      showToast("Report exported as JSON", "success");
+  async function runModel() {
+    const c = state.currentCase;
+    if (!c) {
+      showToast("Open a case first.", "info");
+      switchTab("library");
+      return;
+    }
+    if (!state.model.online) {
+      showToast("The model API is offline, so no model output is available. The dataset annotation is still viewable.", "error");
+      return;
+    }
+
+    showLoading(true);
+    const t0 = performance.now();
+    const timer = setInterval(() => setText("loadingTimeCounter", `${Math.round(performance.now() - t0)} ms`), 50);
+    setLoadingStep(1);
+
+    let analysis;
+    try {
+      const blob = await caseToBlob(c);
+      const form = new FormData();
+      form.append("file", blob, c.filename || "case.png");
+
+      setLoadingStep(2);
+      const res = await fetch(`${API_BASE}/predict`, { method: "POST", body: form });
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+      const result = await res.json();
+
+      setLoadingStep(3);
+      analysis = interpretResult(result);
+    } catch (err) {
+      console.warn("Model request failed:", err);
+      analysis = {
+        ts: new Date().toLocaleString(),
+        mode: "error",
+        trained: false,
+        prediction: null,
+        confidence: null,
+        probabilities: null,
+        maskUrl: null,
+        latencyMs: null,
+        note: `The model request failed (${err.message}). No output is shown.`
+      };
+    }
+
+    setLoadingStep(4);
+    clearInterval(timer);
+
+    c.analysis = analysis;
+    c.progress.model = true;
+    addHistoryEntry(c, "model", analysis);
+
+    setTimeout(() => {
+      showLoading(false);
+      if (analysis.trained) {
+        showToast(`Model output: ${labelOf(analysis.prediction)} (${analysis.confidence.toFixed(1)}%) — experimental, not a diagnosis.`, "success");
+      } else {
+        showToast("Demo-only: no trained-model prediction is shown for this run.", "info");
+      }
+      if (state.activeTab === "workspace") renderWorkspace();
+      renderClassification();
+      renderExplain();
+      renderOverview();
+    }, 250);
+  }
+
+  function interpretResult(result) {
+    const mode = result && result.mode ? String(result.mode) : "unspecified";
+    const pred = String((result && result.prediction) || "").toLowerCase();
+    const probs = normalizeProbs(result && result.probabilities);
+    const latency = result && typeof result.inference_time_ms === "number" ? result.inference_time_ms : null;
+
+    const trained = mode === "trained" && !!CLASS_META[pred];
+
+    if (!trained) {
+      let reason;
+      if (mode !== "trained") {
+        reason = `The API reported mode “${mode}”, not “trained”. To avoid presenting a simulated result as a prediction, the output was discarded.`;
+      } else {
+        reason = `The returned class “${pred || "none"}” is not benign or malignant, so it was discarded.`;
+      }
+      return {
+        ts: new Date().toLocaleString(),
+        mode,
+        trained: false,
+        prediction: null,
+        confidence: null,
+        probabilities: null,
+        maskUrl: null,
+        latencyMs: latency,
+        note: reason
+      };
+    }
+
+    let confidence = probs[pred];
+    if (typeof confidence !== "number") {
+      const raw = Number(result.confidence);
+      confidence = isFinite(raw) ? (raw <= 1 ? raw * 100 : raw) : 0;
+    }
+
+    return {
+      ts: new Date().toLocaleString(),
+      mode,
+      trained: true,
+      prediction: pred,
+      confidence,
+      probabilities: probs,
+      maskUrl: result.segmentation_mask || null,
+      latencyMs: latency,
+      note: result.segmentation_mask ? "Trained checkpoint output (experimental)." : "Trained checkpoint output (experimental). The API returned no segmentation mask."
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Classification view
+  // ---------------------------------------------------------------------
+  function renderClassification() {
+    const c = state.currentCase;
+    const a = c ? c.analysis : null;
+
+    setText("clsCaseTitle", c ? `${c.id} · ${c.title}` : "No case selected");
+    setText("clsRefLabel", c && c.refLabel ? labelOf(c.refLabel) : "None");
+    setText("clsRefNote", c ? c.refNote : "A label supplied by the source dataset for this case. It is not a diagnosis for any person.");
+
+    const notice = $("clsNotice");
+    const badge = $("clsModeBadge");
+    const verdict = $("clsVerdictCard");
+    const probSection = $("clsProbSection");
+
+    if (!c) {
+      badge.textContent = "No case";
+      notice.hidden = false;
+      notice.innerHTML = "<strong>No case open:</strong> choose a case from the library first.";
+      verdict.hidden = true;
+      probSection.hidden = true;
+      setText("clsLatency", "—");
+      setText("clsMaskState", "—");
+    } else if (!a) {
+      badge.textContent = "Not run";
+      notice.hidden = false;
+      notice.innerHTML = `${describeModel().notice}<br><br><strong>No model output yet:</strong> use “Run experimental model”.`;
+      verdict.hidden = true;
+      probSection.hidden = true;
+      setText("clsLatency", "—");
+      setText("clsMaskState", "—");
+    } else if (!a.trained) {
+      badge.textContent = "Demo-only";
+      notice.hidden = false;
+      notice.innerHTML = `<strong>Demo-only — no prediction shown.</strong> ${esc(a.note || "")}`;
+      verdict.hidden = true;
+      probSection.hidden = true;
+      setText("clsLatency", a.latencyMs != null ? `${a.latencyMs} ms` : "—");
+      setText("clsMaskState", "No (demo-only)");
+    } else {
+      badge.textContent = "Trained checkpoint";
+      notice.hidden = true;
+      verdict.hidden = false;
+      probSection.hidden = false;
+
+      setText("verdictClassName", labelOf(a.prediction));
+      const vb = $("verdictCategoryBadge");
+      vb.className = `verdict-category-badge ${(CLASS_META[a.prediction] || {}).badgeClass || "badge-cyan"}`;
+      vb.textContent = "Experimental";
+      setText("verdictConfidenceVal", `${a.confidence.toFixed(1)}%`);
+      $("verdictConfidenceFill").style.width = `${Math.max(0, Math.min(100, a.confidence))}%`;
+
+      let uncertainty;
+      if (a.confidence < 60) uncertainty = "Low margin: the model is close to undecided. Treat this as uncertain.";
+      else if (a.confidence < 75) uncertainty = "Moderate probability: the model leans one way but is not sure.";
+      else uncertainty = "A high probability still does not make this a diagnosis; models trained on small datasets can be overconfident.";
+
+      if (c.refLabel) {
+        uncertainty += c.refLabel === a.prediction
+          ? " The model output matches the dataset's reference label for this case — agreement does not validate the model."
+          : " The model output differs from the dataset's reference label for this case — a good prompt to look at the margins again.";
+      }
+      setText("uncertaintyNote", uncertainty);
+
+      const list = $("probBarsList");
+      list.innerHTML = "";
+      Object.entries(a.probabilities || {}).sort((x, y) => y[1] - x[1]).forEach(([k, v]) => {
+        const meta = CLASS_META[k] || { label: cap(k), color: "#2EC4B6" };
+        const row = document.createElement("div");
+        row.className = "prob-row";
+        row.innerHTML = `
+          <div class="prob-row-header">
+            <span class="prob-class-name">${esc(meta.label)}</span>
+            <span class="prob-class-val mono">${v.toFixed(1)}%</span>
+          </div>
+          <div class="prob-bar-track">
+            <div class="prob-bar-fill" style="width:${Math.max(0, Math.min(100, v))}%; background:${meta.color};"></div>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      setText("clsLatency", a.latencyMs != null ? `${a.latencyMs} ms` : "—");
+      setText("clsMaskState", a.maskUrl ? "Yes" : "No mask returned");
+    }
+
+    renderMetrics();
+  }
+
+  function renderMetrics() {
+    const grid = $("clsMetricsGrid");
+    const badge = $("clsMetricsBadge");
+    if (!grid) return;
+    const metrics = state.model.metrics;
+    grid.innerHTML = "";
+
+    if (!metrics || Object.keys(metrics).length === 0) {
+      badge.textContent = "Not reported";
+      grid.innerHTML = `
+        <div class="bench-stat-box">
+          <span class="bench-label">METRICS</span>
+          <span class="bench-val mono">&mdash;</span>
+          <span class="bench-sub">The model API has not reported held-out metrics yet.</span>
+        </div>`;
+      return;
+    }
+
+    badge.textContent = "Reported by API";
+    Object.entries(metrics).forEach(([k, v]) => {
+      let shown = v;
+      if (typeof v === "number") shown = v <= 1 && v >= 0 ? v.toFixed(3) : String(v);
+      const box = document.createElement("div");
+      box.className = "bench-stat-box";
+      box.innerHTML = `
+        <span class="bench-label">${esc(String(k).replace(/_/g, " ").toUpperCase())}</span>
+        <span class="bench-val mono">${esc(shown)}</span>
+        <span class="bench-sub">Held-out cases</span>`;
+      grid.appendChild(box);
     });
   }
 
-  // =========================================================================
-  // DISCLAIMER MODAL
-  // =========================================================================
-  function openDisclaimer() {
-    if (dom.disclaimerModal) {
-      dom.disclaimerModal.hidden = false;
-      dom.disclaimerModal.style.display = "flex";
+  // ---------------------------------------------------------------------
+  // Explainability view
+  // ---------------------------------------------------------------------
+  function renderExplain() {
+    const c = state.currentCase;
+    const ids = ["exOriginalImg", "exAnnBaseImg", "exModelBaseImg"];
+
+    if (!c) {
+      ids.forEach(id => { $(id).removeAttribute("src"); });
+      $("exAnnOverlayImg").hidden = true;
+      $("exModelOverlayImg").hidden = true;
+      setText("exOriginalMeta", "No case open");
+      setText("exAnnMeta", "No case open");
+      setText("exModelEmpty", "No case open.");
+      return;
     }
+
+    ids.forEach(id => { $(id).src = c.imageUrl; });
+    $("exOriginalImg").alt = `Original scan, case ${c.id}, no overlays`;
+    setText("exOriginalMeta", `${c.id} · ${c.source === "illustrative" ? "illustrative placeholder" : c.source === "upload" ? "your upload" : "public dataset"}`);
+
+    const annOverlay = $("exAnnOverlayImg");
+    if (c.annotationUrl) {
+      annOverlay.src = c.annotationUrl;
+      annOverlay.hidden = false;
+      setText("exAnnMeta", c.source === "illustrative" ? "Illustrative outline (placeholder)" : "Expert annotation from the dataset");
+    } else {
+      annOverlay.hidden = true;
+      setText("exAnnMeta", "No dataset annotation for this case");
+    }
+
+    const maskOverlay = $("exModelOverlayImg");
+    const maskUrl = currentMaskUrl();
+    const empty = $("exModelEmpty");
+    if (maskUrl) {
+      maskOverlay.src = maskUrl;
+      maskOverlay.hidden = false;
+      empty.hidden = true;
+    } else {
+      maskOverlay.hidden = true;
+      empty.hidden = false;
+      if (!c.analysis) empty.textContent = "No model mask yet. Run the experimental model from the Workspace or Classification tab.";
+      else if (!c.analysis.trained) empty.textContent = "Demo-only: no trained checkpoint answered, so no model mask is shown.";
+      else empty.textContent = "The model ran but returned no segmentation mask.";
+    }
+  }
+
+  $("exModelOpacitySlider").addEventListener("input", e => {
+    const val = Number(e.target.value);
+    setText("exModelOpacityVal", `${val}%`);
+    $("exModelOverlayImg").style.opacity = val / 100;
+  });
+
+  // ---------------------------------------------------------------------
+  // History / reports
+  // ---------------------------------------------------------------------
+  function activeHistoryFilter() {
+    const active = $("historyFilterPills").querySelector(".active");
+    return active ? active.getAttribute("data-filter") : "all";
+  }
+
+  function renderHistory() {
+    const body = $("historyTableBody");
+    if (!body) return;
+    body.innerHTML = "";
+
+    let list = state.history;
+    const filter = activeHistoryFilter();
+    if (filter === "model") list = list.filter(h => h.action === "model");
+    if (filter === "viewed") list = list.filter(h => h.action === "viewed");
+
+    const q = ($("historySearchInput").value || "").trim().toLowerCase();
+    if (q) {
+      list = list.filter(h =>
+        h.id.toLowerCase().includes(q) ||
+        String(h.title).toLowerCase().includes(q) ||
+        String(h.caseId).toLowerCase().includes(q));
+    }
+
+    $("emptyHistoryState").hidden = list.length > 0;
+
+    list.forEach(item => {
+      const canOpen = !!findCase(item.caseId);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono"><strong>${esc(item.id)}</strong></td>
+        <td>${esc(item.ts)}</td>
+        <td>${item.thumb
+          ? `<img src="${esc(item.thumb)}" alt="Thumbnail of ${esc(item.caseId)}" style="width:32px; height:32px; border-radius:4px; object-fit:cover;">`
+          : "—"}</td>
+        <td>${esc(item.caseId)} &middot; ${esc(item.title)}</td>
+        <td>${item.action === "model" ? "Model run" : "Case opened"}</td>
+        <td class="mono">${item.refLabel ? esc(labelOf(item.refLabel)) : "—"}</td>
+        <td class="mono">${esc(modelOutputText(item))}</td>
+        <td>
+          <button class="btn btn-secondary-sm" type="button" data-report="${esc(item.id)}">Report</button>
+          ${canOpen ? `<button class="btn btn-secondary-sm" type="button" data-open-case="${esc(item.caseId)}">Open</button>` : ""}
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-report]");
+    if (!el) return;
+    state.reportEntryId = el.getAttribute("data-report");
+    renderReport();
+    const sheet = $("reportPrintableSheet");
+    if (sheet) sheet.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  $("historySearchInput").addEventListener("input", renderHistory);
+
+  $("historyFilterPills").querySelectorAll(".filter-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      $("historyFilterPills").querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      renderHistory();
+    });
+  });
+
+  $("clearHistoryBtn").addEventListener("click", () => {
+    if (confirm("Clear the local demo session history?")) {
+      state.history = [];
+      state.reportEntryId = null;
+      state.maskCache = {};
+      saveHistory();
+      renderHistory();
+      renderReport();
+      renderOverview();
+      showToast("History cleared", "info");
+    }
+  });
+
+  function selectedEntry() {
+    return state.history.find(h => h.id === state.reportEntryId) || state.history[0] || null;
+  }
+
+  function renderReport() {
+    const entry = selectedEntry();
+    const scan = $("repScanImg");
+    const maskImg = $("repMaskImg");
+    const maskNote = $("repMaskNote");
+    const probBody = $("repProbTableBody");
+    probBody.innerHTML = "";
+
+    if (!entry) {
+      setText("repDocId", "—");
+      setText("repEntryId", "—");
+      setText("repDate", "—");
+      setText("repCaseTitle", "No entry selected");
+      setText("repSource", "—");
+      setText("repRefLabel", "—");
+      setText("repModelMode", "MODE: —");
+      setText("repPredictedClass", "—");
+      setText("repConfidence", "—");
+      setText("repLatency", "—");
+      scan.removeAttribute("src");
+      maskImg.hidden = true;
+      maskNote.hidden = false;
+      return;
+    }
+
+    const liveCase = findCase(entry.caseId);
+    setText("repDocId", `REP-${entry.id.replace("EA-", "")}`);
+    setText("repEntryId", entry.id);
+    setText("repDate", entry.ts);
+    setText("repCaseTitle", `${entry.caseId} · ${entry.title}`);
+    setText("repSource", entry.source === "illustrative" ? "Illustrative placeholder (not a real scan)" : entry.source === "upload" ? "User upload" : "Public dataset");
+    setText("repRefLabel", entry.refLabel ? `${labelOf(entry.refLabel)} — dataset reference label` : "None");
+
+    scan.src = liveCase ? liveCase.imageUrl : (entry.thumb || "");
+    scan.alt = `Scan for ${entry.caseId}`;
+
+    const mask = state.maskCache[entry.id];
+    if (mask) {
+      maskImg.src = mask;
+      maskImg.hidden = false;
+      maskNote.hidden = true;
+    } else {
+      maskImg.hidden = true;
+      maskNote.hidden = false;
+      maskNote.textContent = entry.action === "model"
+        ? (entry.trained ? "Mask not kept after reload." : "No model mask: demo-only run.")
+        : "No model run for this entry.";
+    }
+
+    if (entry.action !== "model") {
+      setText("repModelMode", "MODE: not run");
+      setText("repPredictedClass", "—");
+      setText("repConfidence", "—");
+      setText("repLatency", "—");
+    } else if (entry.trained && entry.prediction) {
+      setText("repModelMode", `MODE: ${entry.mode} (experimental)`);
+      setText("repPredictedClass", labelOf(entry.prediction));
+      setText("repConfidence", `${entry.confidence.toFixed(1)}%`);
+      setText("repLatency", entry.latencyMs != null ? `${entry.latencyMs} ms` : "—");
+      Object.entries(entry.probabilities || {}).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
+        const meta = CLASS_META[k] || { label: cap(k), color: "#2EC4B6" };
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${esc(meta.label)}</strong></td>
+          <td class="mono">${v.toFixed(2)}%</td>
+          <td>
+            <div style="height:6px; background:#162231; border-radius:3px; overflow:hidden; width:120px;">
+              <div style="height:100%; width:${Math.max(0, Math.min(100, v))}%; background:${meta.color};"></div>
+            </div>
+          </td>`;
+        probBody.appendChild(tr);
+      });
+    } else {
+      setText("repModelMode", `MODE: ${entry.mode || "unknown"} — demo-only`);
+      setText("repPredictedClass", "No prediction shown");
+      setText("repConfidence", "—");
+      setText("repLatency", entry.latencyMs != null ? `${entry.latencyMs} ms` : "—");
+    }
+  }
+
+  $("printReportBtn").addEventListener("click", () => window.print());
+
+  $("exportJsonReportBtn").addEventListener("click", () => {
+    const entry = selectedEntry();
+    if (!entry) {
+      showToast("No entry to export yet.", "info");
+      return;
+    }
+    const exported = Object.assign({}, entry);
+    delete exported.thumb;
+    exported.disclaimer = "Educational use only. Dataset labels are reference labels; model output is experimental. Not a diagnosis.";
+    exported.dataset = "BrEaST / Breast-Lesions-USG (TCIA), CC BY 4.0";
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exported, null, 2));
+    const dl = document.createElement("a");
+    dl.setAttribute("href", dataStr);
+    dl.setAttribute("download", `${entry.id}_summary.json`);
+    document.body.appendChild(dl);
+    dl.click();
+    dl.remove();
+    showToast("Summary exported as JSON", "success");
+  });
+
+  // ---------------------------------------------------------------------
+  // Sources & Ethics (live status)
+  // ---------------------------------------------------------------------
+  function renderSources() {
+    const m = state.model;
+    setText("srcApiState", m.online ? "online" : "offline");
+    setText("srcMode", m.online ? m.mode : "—");
+    setText("srcLoaded", m.online ? String(m.loaded) : "—");
+    setText("srcClasses", m.classes.length ? m.classes.join(", ") : "—");
+    setText("srcDevice", m.device);
+  }
+
+  // ---------------------------------------------------------------------
+  // Educational notice modal
+  // ---------------------------------------------------------------------
+  function openDisclaimer() {
+    const modal = $("disclaimerModal");
+    modal.hidden = false;
+    modal.style.display = "flex";
+    $("ackDisclaimerBtn").focus();
   }
 
   function closeDisclaimer() {
-    if (dom.disclaimerModal) {
-      dom.disclaimerModal.hidden = true;
-      dom.disclaimerModal.style.display = "none";
-    }
+    const modal = $("disclaimerModal");
+    modal.hidden = true;
+    modal.style.display = "none";
   }
 
-  if (dom.disclaimerModalBtn) {
-    dom.disclaimerModalBtn.addEventListener("click", openDisclaimer);
-  }
-  if (dom.closeDisclaimerBtn) {
-    dom.closeDisclaimerBtn.addEventListener("click", closeDisclaimer);
-  }
-  if (dom.ackDisclaimerBtn) {
-    dom.ackDisclaimerBtn.addEventListener("click", closeDisclaimer);
+  $("disclaimerModalBtn").addEventListener("click", openDisclaimer);
+  $("closeDisclaimerBtn").addEventListener("click", closeDisclaimer);
+  $("ackDisclaimerBtn").addEventListener("click", closeDisclaimer);
+  $("disclaimerModal").addEventListener("click", e => {
+    if (e.target === $("disclaimerModal")) closeDisclaimer();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeDisclaimer();
+  });
+
+  // ---------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------
+  async function init() {
+    closeDisclaimer();
+    showLoading(false);
+    loadHistory();
+    await loadCases();
+    renderSidebarCases();
+    renderLibrary();
+    renderOverview();
+    renderJourney();
+    renderStatusDependents();
+    renderHistory();
+    renderReport();
+    switchTab("overview", { focus: false });
+    checkApiStatus();
+    setInterval(checkApiStatus, 15000);
   }
 
-  if (dom.disclaimerModal) {
-    dom.disclaimerModal.addEventListener("click", e => {
-      if (e.target === dom.disclaimerModal) closeDisclaimer();
-    });
-  }
-
-  // =========================================================================
-  // INITIALIZATION
-  // =========================================================================
-  closeDisclaimer();
-  populatePresetImages();
-  loadInitialHistory();
-  checkApiStatus();
-  setInterval(checkApiStatus, 15000);
-
+  init();
 })();
