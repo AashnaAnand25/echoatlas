@@ -198,40 +198,74 @@
             </div>
           </div>
 
-          <section class="card scan-journey-card" aria-labelledby="scanJourneyTitle">
-            <div class="card-header scan-journey-header">
+          <section class="card atlas-card" aria-labelledby="atlasTitle">
+            <div class="card-header atlas-header">
               <div>
-                <p class="eyebrow mono">A CONCEPTUAL 3D EXPLAINER</p>
-                <h2 class="card-title" id="scanJourneyTitle">From probe movement to ultrasound image</h2>
-                <p class="card-desc">See how a handheld probe sweeps across tissue and turns returning echoes into a 2D slice.</p>
+                <p class="eyebrow mono">ECHOATLAS · OPEN DATA EXPLORER</p>
+                <h2 class="card-title" id="atlasTitle">A world of breast-ultrasound research</h2>
+                <p class="card-desc">Explore where public dataset collections were reported and how many images each catalog lists.</p>
               </div>
-              <button class="btn btn-secondary" id="scanSweepToggle" type="button" aria-pressed="true" aria-controls="scanSweepScene">Pause animation</button>
+              <a class="source-chip" href="https://github.com/NKI-MedTech-AI/breast-ultrasound-openhub" target="_blank" rel="noopener noreferrer">Catalog source ↗</a>
             </div>
-            <div class="scan-journey-layout">
-              <div class="scan-sweep-scene scan-sweep-playing" id="scanSweepScene" role="img" aria-label="Illustration of an ultrasound probe sweeping over layered tissue. A beam-shaped scan plane moves through the tissue and forms a two-dimensional image slice.">
-                <div class="scan-scene-grid" aria-hidden="true"></div>
-                <div class="scan-depth-label scan-depth-top" aria-hidden="true">PROBE</div>
-                <div class="ultrasound-probe" aria-hidden="true"><span></span></div>
-                <div class="scan-beam" aria-hidden="true"></div>
-                <div class="scan-plane" aria-hidden="true"><i></i><i></i><i></i></div>
-                <div class="tissue-volume" aria-hidden="true">
-                  <div class="tissue-layer layer-one"></div><div class="tissue-layer layer-two"></div><div class="tissue-layer layer-three"></div>
-                  <div class="tissue-lesion"></div><div class="echo-wave echo-one"></div><div class="echo-wave echo-two"></div>
+            <div class="atlas-layout">
+              <div class="globe-stage" aria-label="Interactive map of dataset collection countries">
+                <div class="globe-halo" aria-hidden="true"></div>
+                <div class="atlas-globe" id="atlasGlobe">
+                  <div class="globe-surface" aria-hidden="true"></div>
+                  <div class="globe-spin">
+                  <svg class="globe-map" viewBox="0 0 360 360" aria-hidden="true">
+                    <defs><clipPath id="globeClip"><circle cx="180" cy="180" r="164"/></clipPath></defs>
+                    <g clip-path="url(#globeClip)">
+                      <path class="globe-graticule" d="M16 180h328M34 120h292M34 240h292M180 16v328M120 24c-46 78-46 234 0 312M240 24c46 78 46 234 0 312M42 72c84 50 192 50 276 0M42 288c84-50 192-50 276 0"/>
+                      <path class="globe-continent" d="M46 93l24-20 30 5 12 18 31 5 10 20-19 13-7 27-24 10-17 28-20-9-4-27-18-15 5-24-15-12zM114 190l26 6 20 29-7 34-18 31-12 38-18-18 3-29-15-25 8-33zM168 96l17-13 17 8 4 15-14 13-19-5zM169 132l31-15 24 13 5 26-18 18-8 38-21 35-18-28-3-35-15-20zM207 98l34-20 47 8 18 19 34 5 13 20-21 15-26-4-10 20-24 1-12-18-26-3-12-19-17-2zM259 207l28-9 24 16 15 33-18 29-26-11-13-25-17-14z"/>
+                    </g>
+                  </svg>
+                  <div class="globe-pins" id="globePins">
+                    <button class="globe-pin" type="button" data-atlas-location="Brazil" style="--pin-x:31%;--pin-y:67%" aria-label="Brazil: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Spain" style="--pin-x:49%;--pin-y:40%" aria-label="Spain: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Egypt" style="--pin-x:57%;--pin-y:52%" aria-label="Egypt: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Iran" style="--pin-x:63%;--pin-y:47%" aria-label="Iran: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Pakistan" style="--pin-x:68%;--pin-y:51%" aria-label="Pakistan: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="China" style="--pin-x:77%;--pin-y:43%" aria-label="China: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Netherlands" style="--pin-x:51%;--pin-y:34%" aria-label="Netherlands: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Poland" style="--pin-x:54%;--pin-y:36%" aria-label="Poland: dataset collection sources"></button>
+                    <button class="globe-pin" type="button" data-atlas-location="Thailand" style="--pin-x:74%;--pin-y:59%" aria-label="Thailand: dataset collection sources"></button>
+                  </div>
+                  </div>
+                  <div class="globe-orbit orbit-one" aria-hidden="true"></div><div class="globe-orbit orbit-two" aria-hidden="true"></div>
                 </div>
-                <div class="scan-depth-label scan-depth-bottom" aria-hidden="true">TISSUE</div>
-                <div class="scan-slice-chip mono" aria-hidden="true">2D SLICE</div>
+                <div class="globe-caption"><span class="pulse-dot" aria-hidden="true"></span><span>Dataset-source locations · select a marker</span><button class="atlas-motion-toggle" id="globeMotionToggle" type="button" aria-pressed="true" aria-controls="atlasGlobe">Pause globe</button></div>
               </div>
-              <div class="scan-journey-copy">
-                <ol class="scan-steps">
-                  <li><span>01</span><div><strong>Move the probe</strong><p>The probe sends short sound pulses into tissue.</p></div></li>
-                  <li><span>02</span><div><strong>Listen for echoes</strong><p>Different boundaries reflect sound back at different times.</p></div></li>
-                  <li><span>03</span><div><strong>Build a 2D view</strong><p>The scanner maps echo timing and strength into image pixels.</p></div></li>
-                </ol>
-                <div class="dataset-counts" aria-label="BUSI dataset class counts">
-                  <div><strong>780</strong><span>2D images</span></div><div><strong>437</strong><span>benign</span></div><div><strong>210</strong><span>malignant</span></div><div><strong>133</strong><span>normal</span></div>
-                </div>
-                <p class="scan-illustration-note">Illustrative animation, not a reconstruction of a real scan. BUSI provides 2D images, not 3D volumes or reliable location data.</p>
-                <button class="btn-link" type="button" data-tab="library">Explore a BUSI case &rarr;</button>
+              <div class="atlas-results-panel">
+                <label class="atlas-search-label" for="atlasSearch">Find a city, country, or dataset</label>
+                <div class="atlas-search-wrap"><span aria-hidden="true">⌕</span><input id="atlasSearch" type="search" placeholder="Try Cairo, Egypt, BUSI, Brazil…" autocomplete="off"><button id="atlasSearchClear" type="button" aria-label="Clear search" hidden>×</button></div>
+                <div class="atlas-summary" id="atlasSummary" aria-live="polite" aria-atomic="true"></div>
+                <div class="atlas-datasets" id="atlasDatasets"></div>
+                <p class="atlas-source-status"><span class="pulse-dot" aria-hidden="true"></span><span id="atlasDataStatus">Curated metadata snapshot</span></p>
+                <p class="atlas-caveat">Counts are reported image samples; entries may overlap and access terms vary. This demo loads a small BUSI example subset; other entries are metadata only. Collection locations describe dataset sources, not individual patients.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="card case-orbit-card" aria-labelledby="caseOrbitTitle">
+            <div class="card-header case-orbit-header">
+              <div><p class="eyebrow mono">INTERACTIVE CASE VIEWER</p><h2 class="card-title" id="caseOrbitTitle">Tilt a real 2D scan in 3D space</h2><p class="card-desc">Rotate the image plane and step through cases. The perspective is visual only; it does not create extra ultrasound slices.</p></div>
+              <span class="badge badge-secondary mono" id="orbitCaseLabel">Loading case…</span>
+            </div>
+            <div class="case-orbit-layout">
+              <div class="case-orbit-stage" id="caseOrbitStage">
+                <div class="case-orbit-grid" aria-hidden="true"></div>
+                <div class="case-orbit-plane" id="caseOrbitPlane"><img id="caseOrbitImage" alt="Selected breast ultrasound case shown as a 2D scan plane"></div>
+                <div class="orbit-axis axis-x" aria-hidden="true"></div><div class="orbit-axis axis-y" aria-hidden="true"></div>
+                <span class="orbit-stamp mono">2D SOURCE IMAGE</span>
+              </div>
+              <div class="case-orbit-controls">
+                <div class="orbit-case-meta"><span class="metric-label">SELECTED CASE</span><strong id="orbitCaseTitle">Loading available cases…</strong><span id="orbitCaseReference">Dataset reference label shown separately</span></div>
+                <div class="orbit-nav-controls"><button class="btn btn-secondary" id="orbitPrevCase" type="button" aria-label="Previous case">← Previous</button><button class="btn btn-secondary" id="orbitNextCase" type="button" aria-label="Next case">Next →</button></div>
+                <label class="orbit-slider-label" for="caseOrbitAngle"><span>Image-plane angle</span><output id="caseOrbitAngleValue" for="caseOrbitAngle">0°</output></label>
+                <input id="caseOrbitAngle" class="orbit-angle-slider" type="range" min="-35" max="35" value="0" step="1" aria-describedby="orbitAngleHelp">
+                <p id="orbitAngleHelp" class="scan-illustration-note">Use the slider or arrow keys to rotate the display. The original 2D scan data remains unchanged.</p>
+                <button class="btn btn-primary btn-block" id="orbitOpenCase" type="button" disabled>Open this case</button>
               </div>
             </div>
           </section>
@@ -1104,6 +1138,17 @@
                 <li>Raw images are not redistributed in this repository; download and cite the dataset from the source.</li>
               </ul>
               <p class="card-desc">The app's workstation interface is adapted from the MIT-licensed <a href="https://github.com/atleekumaar/brain-tumor-mri-classifier" target="_blank" rel="noopener noreferrer">atleekumaar/brain-tumor-mri-classifier</a> project.</p>
+            </div>
+
+            <div class="card doc-card">
+              <h2 class="card-title">Global atlas metadata</h2>
+              <p>The atlas reads public dataset metadata from the community-maintained <a href="https://github.com/NKI-MedTech-AI/breast-ultrasound-openhub" target="_blank" rel="noopener noreferrer">Breast Ultrasound OpenHub catalog</a>. EchoAtlas refreshes its README table through a cached server endpoint; it does not download or host those datasets.</p>
+              <ul class="doc-list">
+                <li>Counts are reported samples per catalog entry, not a de-duplicated global case total. Entries may overlap.</li>
+                <li>Map markers indicate the collection/source country as cataloged, not the residence or location of individual patients.</li>
+                <li>This demo loads a small BUSI example subset. Other entries link to their source and may require separate access or have non-commercial terms.</li>
+                <li>No C3 AI tenant or API connection is configured. The live refresh reads the public GitHub README; no credentials are stored in this public repository.</li>
+              </ul>
             </div>
 
             <div class="card doc-card">

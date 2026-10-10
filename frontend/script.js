@@ -50,6 +50,9 @@
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
+    atlasLocation: "Egypt",
+    atlasCaseIndex: 0,
+    atlasCaseAngle: 0,
     model: {
       online: false,
       loaded: false,
@@ -69,6 +72,19 @@
       showModel: false
     }
   };
+
+  // Curated public dataset metadata snapshot, not patient-level geography.
+  // Image counts/access terms come from the linked catalog and source pages.
+  let ATLAS_DATASETS = [
+    { country: "Brazil", name: "BUSBRA", images: 1875, access: "Public · CC BY 4.0", href: "https://zenodo.org/records/8231412", source: "Zenodo dataset record" },
+    { country: "China", name: "BUSI_WHU", images: 927, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/k6cpmwybk3/1", source: "Mendeley Data" },
+    { country: "China", name: "US3M", images: 1532, access: "Public · CC BY-NC 4.0", href: "https://www.kaggle.com/datasets/timesxy/multimodal-breast-ultrasound-dataset-us3m", source: "Kaggle dataset page" },
+    { country: "Egypt", location: "Cairo", name: "BUSI", images: 780, access: "Public research dataset", href: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset", source: "Cairo University dataset page", loaded: true },
+    { country: "Iran", name: "QAMEBI", images: 232, access: "Public · access terms at source", href: "https://qamebi.com/breast-ultrasound-images-database", source: "QAMEBI dataset page" },
+    { country: "Pakistan", name: "BUS_UC", images: 811, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/3ksd7w7jkx/1", source: "Mendeley Data" },
+    { country: "Spain", name: "BUS-UCLM", images: 683, access: "Public · CC BY-NC 3.0", href: "https://data.mendeley.com/datasets/7fvgj4jsp7/1", source: "Mendeley Data" },
+    { country: "Spain", name: "UDIAT", images: 163, access: "Access by request", href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php", source: "Dataset access page" }
+  ];
 
   // ---------------------------------------------------------------------
   // Small utilities
@@ -518,24 +534,49 @@
     switchTab(el.getAttribute("data-tab"));
   });
 
-  const scanSweepToggle = $("scanSweepToggle");
-  const scanSweepScene = $("scanSweepScene");
-  if (scanSweepToggle && scanSweepScene) {
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
-      scanSweepScene.classList.remove("scan-sweep-playing");
-      scanSweepToggle.setAttribute("aria-pressed", "false");
-      scanSweepToggle.textContent = "Animation reduced";
-      scanSweepToggle.disabled = true;
+  const atlasSearch = $("atlasSearch");
+  if (atlasSearch) atlasSearch.addEventListener("input", () => renderAtlas(atlasSearch.value));
+  const atlasSearchClear = $("atlasSearchClear");
+  if (atlasSearchClear) atlasSearchClear.addEventListener("click", () => {
+    atlasSearch.value = "";
+    state.atlasLocation = "Egypt";
+    renderAtlas("");
+    atlasSearch.focus();
+  });
+  document.addEventListener("click", e => {
+    const pin = e.target.closest("[data-atlas-location]");
+    if (!pin) return;
+    state.atlasLocation = pin.dataset.atlasLocation;
+    if (atlasSearch) atlasSearch.value = state.atlasLocation;
+    renderAtlas(state.atlasLocation);
+  });
+  const globeMotionToggle = $("globeMotionToggle");
+  const atlasGlobe = $("atlasGlobe");
+  if (globeMotionToggle && atlasGlobe) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      atlasGlobe.classList.add("globe-static");
+      globeMotionToggle.setAttribute("aria-pressed", "false");
+      globeMotionToggle.textContent = "Motion reduced";
+      globeMotionToggle.disabled = true;
     } else {
-      scanSweepToggle.addEventListener("click", () => {
-        const playing = scanSweepToggle.getAttribute("aria-pressed") === "true";
-        scanSweepToggle.setAttribute("aria-pressed", String(!playing));
-        scanSweepScene.classList.toggle("scan-sweep-playing", !playing);
-        scanSweepToggle.textContent = playing ? "Play animation" : "Pause animation";
+      globeMotionToggle.addEventListener("click", () => {
+        const spinning = globeMotionToggle.getAttribute("aria-pressed") === "true";
+        globeMotionToggle.setAttribute("aria-pressed", String(!spinning));
+        atlasGlobe.classList.toggle("globe-static", spinning);
+        globeMotionToggle.textContent = spinning ? "Spin globe" : "Pause globe";
       });
     }
   }
+
+  const orbitAngle = $("caseOrbitAngle");
+  if (orbitAngle) orbitAngle.addEventListener("input", () => {
+    state.atlasCaseAngle = Number(orbitAngle.value);
+    setText("caseOrbitAngleValue", `${state.atlasCaseAngle}°`);
+    const plane = $("caseOrbitPlane");
+    if (plane) plane.style.setProperty("--case-yaw", `${state.atlasCaseAngle}deg`);
+  });
+  $("orbitPrevCase").addEventListener("click", () => { state.atlasCaseIndex -= 1; renderCaseOrbit(); });
+  $("orbitNextCase").addEventListener("click", () => { state.atlasCaseIndex += 1; renderCaseOrbit(); });
 
   const brand = $("brandHomeBtn");
   brand.addEventListener("click", () => switchTab("overview"));
@@ -811,6 +852,90 @@
   // ---------------------------------------------------------------------
   // Overview
   // ---------------------------------------------------------------------
+  function renderAtlas(query = "") {
+    const summary = $("atlasSummary");
+    const list = $("atlasDatasets");
+    if (!summary || !list) return;
+    const q = String(query).trim().toLowerCase();
+    const rows = ATLAS_DATASETS.filter(item => q
+      ? `${item.country} ${item.location || ""} ${item.name} ${item.access}`.toLowerCase().includes(q)
+      : item.country === state.atlasLocation);
+    const countries = [...new Set(rows.map(item => item.country))];
+    const imageCount = rows.reduce((total, item) => total + item.images, 0);
+    const heading = q
+      ? (countries.length === 1 ? countries[0] : `${countries.length} matching collection locations`)
+      : state.atlasLocation;
+    summary.innerHTML = rows.length
+      ? `<strong>${esc(heading)}</strong><span>${rows.length} dataset ${rows.length === 1 ? "entry" : "entries"} · ${imageCount.toLocaleString()} reported samples</span>`
+      : `<strong>No catalog match</strong><span>Try a listed country or dataset name. No match does not mean no research exists there.</span>`;
+
+    list.innerHTML = rows.map(item => {
+      const inAppCount = item.loaded && state.caseSource === "dataset" ? state.cases.length : null;
+      return `<article class="atlas-dataset-card">
+        <div class="atlas-dataset-top"><div><strong>${esc(item.name)}</strong><span>${esc(item.location ? `${item.location}, ${item.country}` : item.country)} · ${item.images.toLocaleString()} ${esc(item.sample_unit || "images")} listed</span></div><a href="${esc(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} source: ${esc(item.source)}">Source ↗</a></div>
+        <div class="atlas-dataset-foot"><span>${esc(item.access)}</span><span class="${inAppCount != null ? "atlas-loaded" : ""}">${inAppCount != null ? `${inAppCount.toLocaleString()} cases loaded here` : "Metadata only · not loaded here"}</span></div>
+        ${item.loaded ? `<button class="btn-link" type="button" data-tab="library">Browse BUSI cases in EchoAtlas →</button>` : ""}
+      </article>`;
+    }).join("");
+
+    document.querySelectorAll("[data-atlas-location]").forEach(pin => {
+      const active = q ? countries.includes(pin.dataset.atlasLocation) : pin.dataset.atlasLocation === state.atlasLocation;
+      pin.classList.toggle("active", active);
+      pin.setAttribute("aria-pressed", String(active));
+    });
+    const clear = $("atlasSearchClear");
+    if (clear) clear.hidden = !q;
+  }
+
+  async function loadAtlasCatalog() {
+    const status = $("atlasDataStatus");
+    if (status) status.textContent = "Refreshing public GitHub catalog…";
+    try {
+      const response = await fetch(`${API_BASE}/api/dataset-atlas`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`Catalog request returned ${response.status}`);
+      const payload = await response.json();
+      if (!Array.isArray(payload.datasets) || payload.datasets.length === 0) throw new Error("Catalog response had no dataset entries");
+      ATLAS_DATASETS = payload.datasets;
+      const fetchedAt = payload.fetched_at ? new Date(payload.fetched_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "just now";
+      if (status) status.textContent = `${payload.stale ? "Cached" : "Live GitHub catalog"} · checked ${fetchedAt}`;
+      renderAtlas(atlasSearch ? atlasSearch.value : "");
+    } catch (error) {
+      if (status) status.textContent = "Curated snapshot · GitHub refresh unavailable";
+      renderAtlas(atlasSearch ? atlasSearch.value : "");
+    }
+  }
+
+  function renderCaseOrbit() {
+    const image = $("caseOrbitImage");
+    const openButton = $("orbitOpenCase");
+    if (!image || !openButton) return;
+    const cases = state.cases.filter(c => c.source !== "upload");
+    if (!cases.length) {
+      image.removeAttribute("src");
+      setText("orbitCaseLabel", "No cases loaded");
+      setText("orbitCaseTitle", "Start the app to load example cases");
+      setText("orbitCaseReference", "No scan is displayed.");
+      openButton.disabled = true;
+      return;
+    }
+    state.atlasCaseIndex = (state.atlasCaseIndex % cases.length + cases.length) % cases.length;
+    const current = cases[state.atlasCaseIndex];
+    image.src = current.imageUrl;
+    image.alt = `${current.source === "illustrative" ? "Illustrative example" : "BUSI dataset"} ultrasound image for ${current.id}: ${current.title}`;
+    setText("orbitCaseLabel", `${state.atlasCaseIndex + 1} / ${cases.length} · ${current.source === "illustrative" ? "ILLUSTRATIVE" : "BUSI DATASET"}`);
+    setText("orbitCaseTitle", `${current.id} · ${current.title}`);
+    setText("orbitCaseReference", current.refLabel
+      ? `${labelOf(current.refLabel)} · dataset reference label`
+      : current.source === "illustrative" ? "Illustrative placeholder · not a real dataset label" : "No dataset reference label available");
+    openButton.disabled = false;
+    openButton.dataset.openCase = current.id;
+    const angle = $("caseOrbitAngle");
+    if (angle) angle.value = String(state.atlasCaseAngle);
+    setText("caseOrbitAngleValue", `${state.atlasCaseAngle}°`);
+    const plane = $("caseOrbitPlane");
+    if (plane) plane.style.setProperty("--case-yaw", `${state.atlasCaseAngle}deg`);
+  }
+
   function modelOutputText(entry) {
     if (entry.action === "viewed") return "—";
     if (entry.trained && entry.prediction) {
@@ -824,6 +949,8 @@
     setText("overviewCaseSource", state.caseSource === "illustrative"
       ? "Illustrative placeholders (not real scans)"
       : "Public dataset cases");
+    renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
+    renderCaseOrbit();
 
     const tbody = $("overviewRecentTbody");
     if (!tbody) return;
@@ -1892,6 +2019,7 @@
     renderSidebarCases();
     renderLibrary();
     renderOverview();
+    loadAtlasCatalog();
     renderJourney();
     renderStatusDependents();
     renderHistory();
