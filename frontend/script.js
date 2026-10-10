@@ -501,6 +501,8 @@
       el.classList.toggle("active", active);
       if (active) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
     });
+    const moreTools = document.querySelector(".sidebar-more-tools details");
+    if (moreTools) moreTools.open = ["simulator", "classification", "explainability", "history", "sources"].includes(tabId);
 
     document.querySelectorAll(".tab-view").forEach(view => {
       view.classList.toggle("active", view.id === `view-${tabId}`);

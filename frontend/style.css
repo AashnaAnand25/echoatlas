@@ -582,6 +582,22 @@ h1, h2, h3, h4, h5, h6 {
   gap: 4px;
 }
 
+.sidebar-more-tools > details > summary,
+.sidebar-presets-section > summary {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.sidebar-more-tools > details > summary:hover,
+.sidebar-presets-section > summary:hover { background: var(--bg-card); color: var(--text-primary); }
+.sidebar-submenu { margin-top: 4px; padding-left: 8px; }
+
 .sidebar-item {
   width: 100%;
   display: flex;
@@ -618,6 +634,23 @@ h1, h2, h3, h4, h5, h6 {
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
+.sidebar-presets-section > summary { padding-left: 8px; }
+
+.overview-welcome { max-width: 68rem; align-items: flex-end; }
+.overview-welcome .view-subtitle { max-width: 48ch; }
+.overview-context { max-width: 68rem; margin-top: 2rem; border-top: 1px solid var(--border-color); }
+.overview-context > summary {
+  width: fit-content;
+  padding: .6rem 0;
+  color: var(--accent-cyan);
+  font-weight: 600;
+  cursor: pointer;
+}
+.overview-context-content { padding-top: .75rem; }
+.overview-context-content > .card { margin-bottom: 1rem; }
+.overview-context:focus-visible > summary,
+.sidebar-more-tools summary:focus-visible,
+.sidebar-presets-section summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 
 .sidebar-presets-list {
   display: flex;
