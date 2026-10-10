@@ -1,9 +1,9 @@
 # EchoAtlas model weights
 
-The public starter repo does not include the MaskFormer implementation or trained weights from the supplied BUSI research paper. The API reports inference as unavailable until both are provided. It will not substitute random weights or the old brain-tumor model.
+The supplied paper describes MaskFormer, but its implementation and trained weights are not in this repo. For a reproducible hackathon baseline, use `scripts/train_busi_baseline.py`; it trains a small multi-task U-Net from scratch and must be described separately from the paper's MaskFormer results.
 
-Expected checkpoint path: `models/EchoAtlas_MaskFormer.pth`. To use another location, set `ECHOATLAS_MODEL_PATH`.
+Expected baseline checkpoint path: `models/EchoAtlas_baseline.pt`. To use another location, set `ECHOATLAS_MODEL_PATH`. The API reports inference unavailable until a checkpoint exists. It does not initialize random weights or substitute the old brain-tumor model.
 
-Add a compatible `backend.maskformer_adapter` module exposing `load_inference_model(checkpoint_path, device)` and `predict_image(image_path, model, classes, device)`. Confirm architecture, class mapping (`normal`, `benign`, `malignant`), preprocessing, and checkpoint format match before enabling it. Do not commit data or weights unless their license permits redistribution.
+Train on the prepared manifest with `python scripts/train_busi_baseline.py --epochs 20`. This selects a checkpoint by validation macro-F1 and writes held-out test metrics to `data/busi_baseline_metrics.json`. The local Apple Silicon machine can use MPS; the SNU CUDA host is also an option. Do not commit weights or raw data to GitHub.
 
-Until those assets are available, use expert masks as **dataset annotations**, not model predictions. See `scripts/prepare_busi.py` and `backend/busi_dataset.py` for the BUSI data pipeline.
+The baseline is an exploratory educational model, not MaskFormer and not clinical evidence. Keep expert masks labeled **dataset annotations** and model output labeled **baseline prediction**. See `scripts/prepare_busi.py` and `backend/busi_dataset.py` for the BUSI data pipeline.

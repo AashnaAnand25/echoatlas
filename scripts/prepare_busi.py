@@ -164,8 +164,10 @@ def main() -> int:
         split_by_index[index] = "test"
 
     split_groups: dict[str, set[str]] = defaultdict(set)
+    grouped_labels: dict[str, set[str]] = defaultdict(set)
     for index, group in enumerate(group_ids):
         split_groups[split_by_index[index]].add(group)
+        grouped_labels[group].add(records[index]["label"])
     if (split_groups["train"] & split_groups["validation"]
             or split_groups["train"] & split_groups["test"]
             or split_groups["validation"] & split_groups["test"]):
@@ -186,6 +188,20 @@ def main() -> int:
             })
 
     counts = Counter(record["label"] for record in records)
+    conflicting_groups = [
+        {
+            "group_id": group,
+            "labels": sorted(grouped_labels[group]),
+            "images": [
+                record["path"].relative_to(root).as_posix()
+                for index, record in enumerate(records)
+                if group_ids[index] == group
+            ],
+            "split": next(split_by_index[index] for index, value in enumerate(group_ids) if value == group),
+        }
+        for group in sorted(grouped_labels)
+        if len(grouped_labels[group]) > 1
+    ]
     split_counts = {
         split: dict(Counter(records[index]["label"] for index in indices))
         for split, indices in (("train", train_indices), ("validation", validation_indices), ("test", test_indices))
@@ -196,7 +212,11 @@ def main() -> int:
         "mask_file_count": len(masks),
         "class_counts": dict(counts),
         "split_class_counts": split_counts,
-        "duplicate_group_count_with_multiple_images": duplicate_group_count,
+        "candidate_duplicate_group_count_with_multiple_images": duplicate_group_count,
+        "candidate_duplicate_image_count": sum(
+            size for size in Counter(group_ids).values() if size > 1
+        ),
+        "cross_label_candidate_groups": conflicting_groups,
         "phash_hamming_distance": args.phash_distance,
         "groups_crossing_splits": False,
         "missing_masks_for_lesion_images": [path.relative_to(root).as_posix() for path in missing_masks],
@@ -208,6 +228,8 @@ def main() -> int:
     print(f"Wrote {len(images)} original-image records to {output_path}")
     print(f"Image counts by class: {dict(counts)}")
     print(f"Masks: {len(masks)}; duplicate groups: {duplicate_group_count}; missing lesion masks: {len(missing_masks)}")
+    if conflicting_groups:
+        print(f"WARNING: {len(conflicting_groups)} candidate duplicate groups contain conflicting class labels; review the audit JSON.")
     print(f"Wrote audit summary to {audit_path}")
     if missing_masks:
         print("WARNING: some benign/malignant images have no paired masks; inspect the audit before training.")
