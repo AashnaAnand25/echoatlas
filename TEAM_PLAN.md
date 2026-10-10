@@ -15,20 +15,22 @@ Reuse the existing workstation layout, but make the content about breast ultraso
 
 ## Dataset and task
 
-Recommended starting point: [BrEaST / Breast-Lesions-USG on TCIA](https://www.cancerimagingarchive.net/collection/breast-lesions-usg/). It provides 256 patient cases, 522 ultrasound images, expert lesion annotations, and clinical labels; the dataset is available under CC BY 4.0. See the [dataset paper](https://doi.org/10.1038/s41597-024-02984-z) for citation and details. Keep the images out of the GitHub repo unless the team deliberately chooses to distribute them with the required attribution; document the download and citation instead.
+Start with the team's paper topic and [BUSI (Breast Ultrasound Images)](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset). The paper supplied by Aashna describes a MaskFormer workflow for BUSI with normal/benign/malignant classification and lesion masks. Keep raw scans out of GitHub; cite Al-Dhabyani et al., *Data in Brief* (2020), DOI [10.1016/j.dib.2019.104863](https://doi.org/10.1016/j.dib.2019.104863).
 
-- **Segmentation:** predict the lesion mask; report Dice and IoU on held-out cases.
-- **Classification:** benign vs. malignant for cases with a usable reference label; report AUROC, balanced accuracy, and macro-F1.
-- Split by patient/case ID so images from the same case cannot appear in both training and test sets. Keep any augmentation in the training split only.
-- Use the team's existing breast-lesion checkpoint only if its input format and label definitions match. Otherwise treat it as a baseline and fine-tune/evaluate on this dataset. Do not promise that a previous 94.3% result will transfer.
-- If BrEaST download or preprocessing blocks the team, use BUSI as a fallback for the demo. BUSI has 780 ultrasound images with labels and masks, but it lacks reliable public patient IDs and duplicate leakage has been reported; group exact/near duplicates before splitting and describe the result as image-level exploratory evaluation, not patient-level validation.
+The paper reports 891 benign + 421 malignant + 266 normal images, while the official BUSI page reports 780 original images (437 benign, 210 malignant, 133 normal). Check the exact dataset version and counting convention before claiming reproduction. The paper's 0.943 is mAP, not plain accuracy; do not claim it as a hackathon result unless the evaluation is reproduced.
+
+- **Segmentation:** predict lesion masks; report Dice and IoU on held-out scans.
+- **Classification:** three classes (normal/benign/malignant) as in the paper; report macro-F1 and balanced accuracy, and use one-vs-rest mAP only if implemented and documented.
+- BUSI does not expose dependable patient identifiers. The included preparation script groups exact and near-duplicate images before a stratified image-level split. This reduces duplicate leakage but cannot establish patient-level independence; state this limitation.
+- Keep `_mask` files as labels only, never as model inputs. Apply augmentation only to training data after assigning splits.
+- The paper's checkpoint and MaskFormer adapter are not included in the starter repo. Use them only if the lab supplies compatible code and weights; otherwise show expert annotations as ground truth and say model inference is unavailable. Do not promise that the paper's 0.943 mAP will transfer.
 
 ## Six-hour plan
 
 | Time | Shared milestone |
 | --- | --- |
-| 0:00–0:30 | Run the existing UI; confirm that no model checkpoint is present and that standalone predictions are simulated. Agree on EchoAtlas, the learner user story, the dataset, and the API response shape. |
-| 0:30–1:15 | Download/inspect the dataset, confirm image-mask-label pairing, and build one representative case card. In parallel, apply the theme and map the tabs. |
+| 0:00–0:30 | Run the existing UI; inspect backend/model status, agree on EchoAtlas and the learner user story, and check whether compatible BUSI MaskFormer code and weights are available. |
+| 0:30–1:15 | Download/inspect BUSI, run `python scripts/prepare_busi.py --root /path/to/Dataset_BUSI_with_GT`, confirm pairings, and build one representative case. In parallel, apply the theme and map tabs. |
 | 1:15–3:30 | Build the segmentation/classification baseline and metrics; independently adapt the UI. If training is blocked, use a real checkpoint or display ground-truth annotations only—never show fabricated predictions as model output. |
 | 3:30–4:30 | Integrate through the agreed API; connect a sample case and upload flow. Clearly label dataset annotation, model prediction, and demo-only states. |
 | 4:30–5:15 | Check one full demo path, compute/report metrics from the held-out split, verify attribution, and fix the biggest failure. |
@@ -38,7 +40,7 @@ Recommended starting point: [BrEaST / Breast-Lesions-USG on TCIA](https://www.ca
 
 | Person | Owns | Deliverable |
 | --- | --- | --- |
-| 1 — You: data/model pipeline | Dataset loading and audit, case-level split, model inference/training, metrics, and backend response contract. | One reproducible case result with a real predicted mask and class output, or a clearly labeled ground-truth-only fallback. |
+| 1 — You: data/model pipeline | Dataset loading and audit, duplicate-grouped split, model integration/training, metrics, and backend response contract. | One reproducible case result with a real predicted mask and class output, or a clearly labeled ground-truth-only fallback. |
 | 2 — Visual design | `frontend/style.css`: EchoAtlas color system, accessible contrast, focus states, text sizing, and responsive/low-bandwidth presentation. Coordinate with Person 3 on the brand words; avoid editing their HTML/JS files. | A cohesive accessible workstation theme. |
 | 3 — Product/UI | `frontend/index.html` and `frontend/script.js`: rebrand text, repurpose tabs, case flow, model/data labels, and API integration. Coordinate API fields with Person 1; avoid editing CSS. | A clear learner journey from case selection to annotation/model comparison. |
 
@@ -73,7 +75,7 @@ Agree before implementation. Suggested response from `POST /predict`:
 ### Person 1 — data and models
 
 ```text
-You own the data/model pipeline for EchoAtlas, a Code Ada Tech for Equity educational breast-ultrasound case explorer. Work only in backend/model/data-related files; do not edit frontend files. First inspect the existing repo and report how its standalone fallback behaves and whether a trained checkpoint is present. Use the BrEaST / Breast-Lesions-USG TCIA dataset if available; cite its CC BY 4.0 source and do not commit raw scans. Build a loader that pairs each image with its case ID, reference label, and expert lesion mask. Split by case/patient ID before augmentation. Create a realistic baseline: lesion segmentation plus benign/malignant classification only where reference labels exist. Reuse my existing breast-lesion checkpoint only if its classes, preprocessing, and input format match; otherwise do not claim its old score applies. Report Dice/IoU for segmentation and AUROC, balanced accuracy, and macro-F1 for classification on held-out cases. Expose a stable POST /predict response with mode, prediction, probabilities, segmentation_mask, and inference_time_ms, and a status endpoint that reports whether real weights loaded. Never return synthetic predictions as trained-model results. If training or data access is blocked, return an honest status and explain the smallest workable fallback. Summarize changed files, run instructions, measured metrics, split method, and limitations.
+You own the data/model pipeline for EchoAtlas, a Code Ada Tech for Equity educational breast-ultrasound case explorer. Work only in backend/model/data-related files; do not edit frontend files. Use BUSI, matching the supplied MaskFormer paper's topic. Run `python scripts/prepare_busi.py --root /path/to/Dataset_BUSI_with_GT` and inspect its manifest/audit outputs. The included loader keeps masks out of image inputs. BUSI lacks reliable patient IDs, so describe the duplicate-grouped stratified split as image-level exploratory evaluation, not patient-level validation. Integrate the lab's MaskFormer code/checkpoint only if provided and compatible. Report Dice/IoU for segmentation and macro-F1/balanced accuracy (plus mAP only with a documented implementation) on held-out groups. The paper reports 0.943 mAP; do not call that accuracy or claim it as reproduced without matching evaluation. Never return synthetic predictions as trained results. Summarize changed files, run instructions, measured metrics, split method, and limitations.
 ```
 
 ### Person 2 — visual design and accessibility

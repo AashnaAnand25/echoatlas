@@ -1,25 +1,27 @@
 from pathlib import Path
-import os, shutil, uuid
+import os
+import shutil
+import uuid
 import torch
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Support running directly or as module
 try:
     from model import load_model
-    from predict import predict_image
 except ImportError:
     from backend.model import load_model
-    from backend.predict import predict_image
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "models" / "NeuroScan_AI_model.pth"
+MODEL_PATH = Path(os.environ.get(
+    "ECHOATLAS_MODEL_PATH", BASE_DIR / "models" / "EchoAtlas_MaskFormer.pth"
+)).expanduser().resolve()
 FRONTEND_DIR = BASE_DIR / "frontend"
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="NeuroScan AI - Brain Tumor Classifier API")
+app = FastAPI(title="EchoAtlas - Breast Ultrasound Research API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,27 +31,37 @@ app.add_middleware(
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model, classes = load_model(str(MODEL_PATH), device)
-print(f"[INFO] Running on device: {device} with classes: {classes}")
+model, classes, model_load_error = load_model(str(MODEL_PATH), device)
+if model is None:
+    print(f"[WARNING] EchoAtlas inference unavailable: {model_load_error}")
+else:
+    print(f"[INFO] EchoAtlas MaskFormer ready on {device} with classes: {classes}")
 
 @app.get("/api/status")
 async def get_status():
     return {
         "status": "online",
         "device": str(device),
-        "model_loaded": MODEL_PATH.exists(),
-        "model_name": "BrainTumorCNN v1.0",
-        "architecture": "4x Conv2D (3->32->64->128->256) + MaxPool + Linear(256) + Dropout(0.6) + Linear(4)",
-        "framework": "PyTorch",
-        "input_size": "224 x 224 x 3",
-        "test_accuracy": "94.56%",
-        "train_accuracy": "99.07%",
-        "f1_score": "0.94",
-        "classes": classes
+        "mode": "trained" if model is not None else "unavailable",
+        "model_loaded": model is not None,
+        "model_name": "EchoAtlas MaskFormer",
+        "architecture": "MaskFormer with ResNet-50 backbone (paper configuration)",
+        "dataset": "BUSI",
+        "input_size": "512 x 512 grayscale",
+        "classes": classes,
+        "load_error": model_load_error,
     }
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "EchoAtlas model is unavailable. Add the compatible MaskFormer "
+                "adapter and checkpoint; no random or simulated inference is returned."
+            ),
+        )
     ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
     temp_path = UPLOAD_DIR / f"{uuid.uuid4()}.{ext}"
 
@@ -57,7 +69,13 @@ async def predict(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     try:
+        from backend.maskformer_adapter import predict_image
         result = predict_image(str(temp_path), model, classes, device)
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"MaskFormer prediction adapter is unavailable: {exc}",
+        ) from exc
     finally:
         if temp_path.exists():
             os.remove(temp_path)

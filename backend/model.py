@@ -1,45 +1,40 @@
-import torch
-import torch.nn as nn
+"""Load the trained EchoAtlas MaskFormer adapter when it is provided.
 
-class BrainTumorCNN(nn.Module):
-    def __init__(self,num_classes=4):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(3,32,3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(32,64,3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(64,128,3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-            nn.Conv2d(128,256,3, padding=1),nn.ReLU(), nn.MaxPool2d(2),
-        )
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(256 * 14 * 14, 256),
-            nn.ReLU(),
-            nn.Dropout(0.6),
-            nn.Linear(256, num_classes)
-        )
+The public starter repo does not include the MaskFormer implementation or
+checkpoint described in the research paper. This module deliberately does not
+initialize random weights or substitute the old brain-tumor CNN.
+"""
 
-    def forward(self, x):
-        x = self.features(x)
-        x = self.classifier(x)
-        return x
+from __future__ import annotations
 
-def load_model(model_path, device):
-    DEFAULT_CLASSES = ["glioma", "meningioma", "notumor", "pituitary"]
+from pathlib import Path
+from typing import Any
+
+CLASS_NAMES = ["normal", "benign", "malignant"]
+
+
+def load_model(model_path: str | Path, device: Any):
+    """Load a project-supplied MaskFormer adapter and checkpoint.
+
+    The adapter is expected at ``backend.maskformer_adapter`` and must expose
+    ``load_inference_model(checkpoint_path, device)``. Keeping that dependency
+    optional lets the API and dataset tooling report a clear model-unavailable
+    state until the lab checkpoint/code is added.
+    """
+    checkpoint_path = Path(model_path)
+    if not checkpoint_path.is_file():
+        return None, CLASS_NAMES, f"Checkpoint not found: {checkpoint_path.name}"
+
     try:
-        # PyTorch 2.6+ compatibility
-        try:
-            checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-        except TypeError:
-            checkpoint = torch.load(model_path, map_location=device)
-        classes = checkpoint.get("classes", DEFAULT_CLASSES)
-        model = BrainTumorCNN(num_classes=len(classes)).to(device)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        model.eval()
-        print(f"[INFO] Loaded trained weights from {model_path}")
-        return model, classes
-    except Exception as e:
-        print(f"[WARNING] Could not load model weights from {model_path}: {e}")
-        print("[INFO] Initializing default BrainTumorCNN architecture (Untrained/Demo mode).")
-        model = BrainTumorCNN(num_classes=len(DEFAULT_CLASSES)).to(device)
-        model.eval()
-        return model, DEFAULT_CLASSES
+        from backend.maskformer_adapter import load_inference_model
+    except ImportError:
+        return None, CLASS_NAMES, (
+            "MaskFormer inference adapter is not present. Add the research model code "
+            "and a compatible checkpoint before enabling inference."
+        )
+
+    try:
+        model = load_inference_model(str(checkpoint_path), device)
+    except Exception as exc:  # Preserve API availability while surfacing the exact setup issue.
+        return None, CLASS_NAMES, f"Could not load MaskFormer checkpoint: {exc}"
+    return model, CLASS_NAMES, None
