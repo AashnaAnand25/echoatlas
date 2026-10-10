@@ -638,6 +638,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .overview-welcome { max-width: 68rem; align-items: flex-end; }
 .overview-welcome .view-subtitle { max-width: 48ch; }
+.overview-welcome .view-header-actions { flex-direction: column; align-items: stretch; gap: .15rem; }
 .overview-context { max-width: 68rem; margin-top: 2rem; border-top: 1px solid var(--border-color); }
 .overview-context > summary {
   width: fit-content;
@@ -651,6 +652,25 @@ h1, h2, h3, h4, h5, h6 {
 .overview-context:focus-visible > summary,
 .sidebar-more-tools summary:focus-visible,
 .sidebar-presets-section summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.overview-browse-link { text-align: center; }
+.guided-tour-panel {
+  max-width: 68rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-teal);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+.guided-tour-topline { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.guided-tour-step { color: var(--accent-cyan); font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.guided-tour-skip { padding: .25rem .4rem; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .82rem; text-decoration: underline; cursor: pointer; }
+.guided-tour-progress-track { height: 3px; margin: .45rem 0 .8rem; overflow: hidden; border-radius: 999px; background: var(--bg-elevated); }
+.guided-tour-progress-track span { display: block; width: 20%; height: 100%; border-radius: inherit; background: var(--accent-teal); transition: width .2s ease; }
+.guided-tour-panel h2 { margin: 0 0 .25rem; font-size: 1.05rem; }
+.guided-tour-panel p { max-width: 68ch; margin: 0; color: var(--text-secondary); }
+.guided-tour-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .8rem; }
+.guided-tour-panel button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 
 .sidebar-presets-list {
   display: flex;
@@ -3350,6 +3370,8 @@ button:disabled, [aria-disabled="true"] {
   .sample-scans-showcase, .preset-samples-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metrics-grid, .upload-guidelines-grid, .explain-guide-grid { grid-template-columns: minmax(0, 1fr); }
   .view-header, .dropzone-preview-stage, .table-toolbar { flex-direction: column; align-items: stretch; }
+  .guided-tour-actions { justify-content: stretch; }
+  .guided-tour-actions button { flex: 1; }
   .search-input-wrap { flex-basis: auto; max-width: none; }
   .dropzone-card, .report-sheet-container, .loading-modal-card { padding: 1rem; }
   .card { padding: 1rem; }

@@ -132,6 +132,14 @@
       <!-- ================================================== -->
       <main class="main-content" id="mainContent" tabindex="-1">
 
+        <section class="guided-tour-panel" id="guidedTourPanel" aria-labelledby="guidedTourTitle" aria-live="polite" hidden>
+          <div class="guided-tour-topline"><span class="guided-tour-step" id="guidedTourProgress">Step 1 of 5</span><button class="guided-tour-skip" id="guidedTourSkipBtn" type="button">Exit walkthrough</button></div>
+          <div class="guided-tour-progress-track" aria-hidden="true"><span id="guidedTourProgressBar"></span></div>
+          <h2 id="guidedTourTitle"></h2>
+          <p id="guidedTourDescription"></p>
+          <div class="guided-tour-actions"><button class="btn btn-secondary-sm" id="guidedTourBackBtn" type="button">Back</button><button class="btn btn-primary-sm" id="guidedTourActionBtn" type="button"></button></div>
+        </section>
+
         <!-- ============================================== -->
         <!-- TAB 1: OVERVIEW                                -->
         <!-- ============================================== -->
@@ -143,7 +151,8 @@
               <p class="view-subtitle">Explore a public ultrasound and compare the dataset’s marked area with an experimental AI mask.</p>
             </div>
             <div class="view-header-actions">
-              <button class="btn btn-primary" type="button" data-tab="library" aria-controls="view-library">Browse cases</button>
+              <button class="btn btn-primary" id="startGuidedTourBtn" type="button">Start guided walkthrough</button>
+              <button class="btn-link overview-browse-link" type="button" data-tab="library" aria-controls="view-library">Browse cases instead</button>
             </div>
           </div>
 

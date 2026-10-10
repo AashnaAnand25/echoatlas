@@ -48,6 +48,7 @@
     historyCounter: 0,
     reportEntryId: null,
     practice: { cases: [], index: 0, matches: 0, answered: false },
+    guidedTour: { active: false, step: 0, busy: false },
     maskCache: {}, // entryId -> mask data URL (memory only)
     pendingUpload: null, // { file, dataUrl, width, height }
     activeTab: "overview",
@@ -523,6 +524,7 @@
     if (tabId === "history") { renderHistory(); renderReport(); }
     if (tabId === "sources") renderSources();
     if (tabId === "chat") { refreshChatStatus(); renderChat(); }
+    renderGuidedTour();
 
     if (opts.focus !== false) {
       const heading = document.querySelector(`#view-${tabId} h1`);
@@ -534,6 +536,117 @@
       if (main) main.scrollTop = 0;
     }
   }
+
+  const GUIDED_TOUR_STEPS = [
+    { tab: "library", title: "Choose a case", description: "Pick any example below. Public dataset cases have a reference label; it is for learning, not diagnosis." },
+    { tab: "workspace", title: "Explore the scan", description: "Look closely at the image. Try zoom or brightness, then continue when you’re ready." },
+    { tab: "workspace", title: "Reveal the dataset annotation", description: "This outline comes from the dataset. It is separate from anything the AI predicts." },
+    { tab: "workspace", title: "Try the experimental model", description: "Run the model to see its experimental output. It may disagree with the dataset label." },
+    { tab: "classification", title: "Compare the two labels", description: "Review the dataset reference and model output side by side. Neither is a diagnosis." },
+  ];
+
+  function renderGuidedTour() {
+    const tour = state.guidedTour;
+    const panel = $("guidedTourPanel");
+    if (!panel) return;
+    panel.hidden = !tour.active;
+    if (!tour.active) return;
+
+    const step = GUIDED_TOUR_STEPS[tour.step];
+    const caseData = state.currentCase;
+    const currentTab = state.activeTab;
+    const expectedTab = step.tab;
+    const isExpectedTab = currentTab === expectedTab;
+    const title = $("guidedTourTitle");
+    const description = $("guidedTourDescription");
+    const action = $("guidedTourActionBtn");
+    const back = $("guidedTourBackBtn");
+
+    setText("guidedTourProgress", `Step ${tour.step + 1} of ${GUIDED_TOUR_STEPS.length}`);
+    $("guidedTourProgressBar").style.width = `${((tour.step + 1) / GUIDED_TOUR_STEPS.length) * 100}%`;
+    title.textContent = step.title;
+    description.textContent = isExpectedTab ? step.description : (tour.step === 0 ? "Open the case library to choose an example." : "Return to your selected case to continue the walkthrough.");
+    back.hidden = tour.step === 0 || tour.busy;
+    action.hidden = tour.step === 0 && isExpectedTab;
+    action.disabled = tour.busy;
+
+    if (!isExpectedTab) {
+      action.textContent = tour.step === 0 ? "Open case library" : tour.step === 4 ? "Compare labels" : "Return to case";
+    } else if (tour.step === 1) {
+      action.textContent = "Continue";
+    } else if (tour.step === 2) {
+      action.textContent = caseData && caseData.annotationUrl ? (state.viewer.showAnnotation ? "Continue" : "Show dataset annotation") : "Continue";
+      if (!caseData || !caseData.annotationUrl) description.textContent = "This case has no dataset annotation. Some cases do; custom uploads do not.";
+    } else if (tour.step === 3) {
+      action.textContent = caseData && caseData.analysis ? "Review model output" : state.model.online ? "Run experimental model" : "Continue without model";
+    } else if (tour.step === 4) {
+      action.textContent = currentTab === "classification" ? "Finish walkthrough" : "Compare labels";
+    }
+  }
+
+  function advanceGuidedTour() {
+    const tour = state.guidedTour;
+    if (!tour.active || tour.busy) return;
+    const step = GUIDED_TOUR_STEPS[tour.step];
+    if (state.activeTab !== step.tab) {
+      switchTab(step.tab);
+      return;
+    }
+    if (tour.step === 0) return; // selecting a case advances the walkthrough
+    if (tour.step === 1) {
+      tour.step = 2;
+      renderGuidedTour();
+      return;
+    }
+    if (tour.step === 2) {
+      const c = state.currentCase;
+      if (c && c.annotationUrl && !state.viewer.showAnnotation) $("toggleAnnotationBtn").click();
+      tour.step = 3;
+      renderGuidedTour();
+      return;
+    }
+    if (tour.step === 3) {
+      if (state.currentCase && state.currentCase.analysis) {
+        tour.step = 4;
+        switchTab("classification");
+        return;
+      }
+      if (state.model.online) {
+        tour.busy = true;
+        renderGuidedTour();
+        $("runModelBtn").click();
+      } else {
+        tour.step = 4;
+        switchTab("classification");
+      }
+      return;
+    }
+    if (tour.step === 4 && state.activeTab !== "classification") {
+      switchTab("classification");
+      return;
+    }
+    tour.active = false;
+    renderGuidedTour();
+  }
+
+  function retreatGuidedTour() {
+    const tour = state.guidedTour;
+    if (!tour.active || tour.step <= 0 || tour.busy) return;
+    tour.step -= 1;
+    switchTab(GUIDED_TOUR_STEPS[tour.step].tab);
+  }
+
+  $("startGuidedTourBtn").addEventListener("click", () => {
+    state.guidedTour = { active: true, step: 0, busy: false };
+    switchTab("library");
+  });
+  $("guidedTourActionBtn").addEventListener("click", advanceGuidedTour);
+  $("guidedTourBackBtn").addEventListener("click", retreatGuidedTour);
+  $("guidedTourSkipBtn").addEventListener("click", () => {
+    state.guidedTour.active = false;
+    state.guidedTour.busy = false;
+    renderGuidedTour();
+  });
 
   document.addEventListener("click", e => {
     const path = typeof e.composedPath === "function" ? e.composedPath() : [e.target];
@@ -1115,6 +1228,7 @@
 
   function openCase(c) {
     state.currentCase = c;
+    if (state.guidedTour.active && state.guidedTour.step === 0) state.guidedTour.step = 1;
     resetViewer();
     if (c.analysis && c.analysis.trained && c.analysis.maskUrl) {
       // keep model mask available but hidden until the learner toggles it
@@ -2002,6 +2116,10 @@
 
     setTimeout(() => {
       showLoading(false);
+      if (state.guidedTour.active && state.guidedTour.step === 3) {
+        state.guidedTour.step = 4;
+        state.guidedTour.busy = false;
+      }
       if (analysis.trained) {
         showToast(`Model output: ${labelOf(analysis.prediction)} (${analysis.confidence.toFixed(1)}%) — experimental, not a diagnosis.`, "success");
       } else {
@@ -2011,6 +2129,7 @@
       renderClassification();
       renderExplain();
       renderOverview();
+      renderGuidedTour();
     }, 250);
   }
 
