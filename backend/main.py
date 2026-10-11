@@ -285,7 +285,9 @@ async def assistant_chat(request: FastAPIRequest):
         if exc.code in (401, 403):
             raise HTTPException(status_code=502, detail="Google rejected the Gemini API key or its access scope.") from exc
         if exc.code == 429:
-            raise HTTPException(status_code=503, detail="Gemini is busy or this key reached its quota. Please try again shortly.") from exc
+            raise HTTPException(status_code=503, detail="Gemini reached a rate or quota limit. Please wait before trying again.") from exc
+        if exc.code in (500, 503, 504):
+            raise HTTPException(status_code=503, detail="Gemini is experiencing high demand. Your question could not be answered right now. Please try again shortly.") from exc
         raise HTTPException(status_code=502, detail=f"Gemini chat request failed with HTTP {exc.code}.") from exc
     except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=502, detail="Could not reach the Gemini API.") from exc
