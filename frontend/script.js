@@ -75,17 +75,515 @@
     }
   };
 
-  // Curated public dataset metadata snapshot, not patient-level geography.
-  // Image counts/access terms come from the linked catalog and source pages.
+  // Curated public dataset metadata snapshot; institutional collection sources, not patient residences.
+  // Image counts and access terms come from verified public sources/publications; never summed across datasets.
   let ATLAS_DATASETS = [
-    { country: "Brazil", name: "BUSBRA", images: 1875, access: "Public · CC BY 4.0", href: "https://zenodo.org/records/8231412", source: "Zenodo dataset record" },
-    { country: "China", name: "BUSI_WHU", images: 927, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/k6cpmwybk3/1", source: "Mendeley Data" },
-    { country: "China", name: "US3M", images: 1532, access: "Public · CC BY-NC 4.0", href: "https://www.kaggle.com/datasets/timesxy/multimodal-breast-ultrasound-dataset-us3m", source: "Kaggle dataset page" },
-    { country: "Egypt", location: "Cairo", name: "BUSI", images: 780, access: "Public research dataset", href: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset", source: "Cairo University dataset page", loaded: true },
-    { country: "Iran", name: "QAMEBI", images: 232, access: "Public · access terms at source", href: "https://qamebi.com/breast-ultrasound-images-database", source: "QAMEBI dataset page" },
-    { country: "Pakistan", name: "BUS_UC", images: 811, access: "Public · CC BY 4.0", href: "https://data.mendeley.com/datasets/3ksd7w7jkx/1", source: "Mendeley Data" },
-    { country: "Spain", name: "BUS-UCLM", images: 683, access: "Public · CC BY-NC 3.0", href: "https://data.mendeley.com/datasets/7fvgj4jsp7/1", source: "Mendeley Data" },
-    { country: "Spain", name: "UDIAT", images: 163, access: "Access by request", href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php", source: "Dataset access page" }
+    {
+      name: "BUSI",
+      dataset_name: "BUSI (Dataset of Breast Ultrasound Images)",
+      country: "Egypt",
+      collection_country: "Egypt",
+      location: "Cairo",
+      collection_location: "Cairo (Baheya Hospital for Early Detection and Treatment of Women's Cancer)",
+      images: 780,
+      image_count: 780,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "600 female patients aged 25-78; 487 benign, 210 malignant, 133 normal images",
+      access: "Public research dataset",
+      href: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset",
+      source_url: "https://scholar.cu.edu.eg/?q=afahmy/pages/dataset",
+      publication_url: "https://doi.org/10.1016/j.dib.2019.104863",
+      citation: "Al-Dhabyani et al. (2020), Data in Brief 28:104863",
+      source: "Cairo University / Data in Brief",
+      provenance_source: "Data in Brief (Al-Dhabyani et al., 2020) & Cairo University repository",
+      loaded: true,
+      map_x: 587,
+      map_y: 167
+    },
+    {
+      name: "BCMID",
+      dataset_name: "BCMID (Breast Cancer Multimodal Imaging Dataset)",
+      country: "Egypt",
+      collection_country: "Egypt",
+      location: "Cairo & Alexandria",
+      collection_location: "Cairo & Alexandria (Ain Shams Univ & Alexandria Univ Medical Centers)",
+      images: 3223,
+      image_count: 3223,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "3,223 breast cancer multimodal ultrasound & mammography images across 323 patients",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/14970848",
+      source_url: "https://zenodo.org/records/14970848",
+      publication_url: "https://doi.org/10.5281/zenodo.14970848",
+      citation: "Seddik Tawfik, N., Ghatwary, N., Elgendy, A., Nasr, O., & Ye, X. (2025). BCMID: Breast Cancer Multimodal Imaging Dataset. Zenodo.",
+      provenance_source: "Zenodo record 14970848 & OpenHub catalog",
+      source: "Zenodo / Ain Shams Univ.",
+      loaded: false,
+      map_x: 583,
+      map_y: 163
+    },
+    {
+      name: "BUS-BRA",
+      dataset_name: "BUS-BRA (A Breast Ultrasound Dataset for Assessing CAD Systems)",
+      country: "Brazil",
+      collection_country: "Brazil",
+      location: "Rio de Janeiro",
+      collection_location: "Rio de Janeiro (Universidade Federal do Rio de Janeiro & Universidade Estácio de Sá)",
+      images: 1875,
+      image_count: 1875,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "1,064 patients; 1,875 B-mode images (1,268 benign, 607 malignant) with segmentations",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/8231412",
+      source_url: "https://zenodo.org/records/8231412",
+      publication_url: "https://doi.org/10.1002/mp.16812",
+      citation: "Gómez-Flores et al. (2024), Medical Physics 51(3):2326-2337",
+      source: "Zenodo / Medical Physics",
+      provenance_source: "Medical Physics (Gómez-Flores et al., 2024) & Zenodo 8231412",
+      loaded: false,
+      map_x: 380,
+      map_y: 314
+    },
+    {
+      name: "UDIAT",
+      dataset_name: "UDIAT (Breast Ultrasound Dataset B)",
+      country: "Spain",
+      collection_country: "Spain",
+      location: "Sabadell",
+      collection_location: "Sabadell (UDIAT-Centre Diagnòstic, Corporació Sanitària Parc Taulí)",
+      images: 163,
+      image_count: 163,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "163 B-mode ultrasound images (110 benign, 53 malignant) collected in Sabadell, Spain",
+      access: "Research access by request",
+      href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      source_url: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      publication_url: "https://doi.org/10.1109/JBHI.2017.2731873",
+      citation: "Yap et al. (2018), IEEE JBHI 22(4):1218-1226",
+      source: "UDIAT / MMU Dataset Page",
+      provenance_source: "IEEE JBHI (Yap et al., 2018) & MMU dataset portal",
+      loaded: false,
+      map_x: 506,
+      map_y: 135
+    },
+    {
+      name: "BUS-UCLM",
+      dataset_name: "BUS-UCLM (Breast Ultrasound Lesion Segmentation Dataset)",
+      country: "Spain",
+      collection_country: "Spain",
+      location: "Ciudad Real",
+      collection_location: "Ciudad Real (Hospital General Universitario de Ciudad Real)",
+      images: 683,
+      image_count: 683,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "683 ultrasound images (419 normal, 174 benign, 90 malignant) with segmentations",
+      access: "Public · CC BY-NC 3.0",
+      href: "https://github.com/noeliavallez/BUS-UCLM-Dataset",
+      source_url: "https://github.com/noeliavallez/BUS-UCLM-Dataset",
+      publication_url: "https://doi.org/10.1038/s41597-025-04562-3",
+      citation: "Vallez et al. (2025), Scientific Data 12:185",
+      source: "Scientific Data / GitHub",
+      provenance_source: "Scientific Data (Vallez et al., 2025) & GitHub repository",
+      loaded: false,
+      map_x: 489,
+      map_y: 142
+    },
+    {
+      name: "OASBUD",
+      dataset_name: "OASBUD (Open Access Database of Raw Ultrasonic Signals from Breast Lesions)",
+      country: "Poland",
+      collection_country: "Poland",
+      location: "Warsaw",
+      collection_location: "Warsaw (Cancer Center & Institute of Oncology M. Skłodowska-Curie Memorial / IPPT PAN)",
+      images: 100,
+      image_count: 100,
+      count_type: "publication-reported",
+      sample_unit: "lesion cases",
+      cohort_details: "100 breast focal lesions (52 malignant, 48 benign) with raw RF data and reconstructed B-mode",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/545928",
+      source_url: "https://zenodo.org/records/545928",
+      publication_url: "https://doi.org/10.1002/mp.12538",
+      citation: "Piotrzkowska-Wróblewska et al. (2017), Medical Physics 44(11):6100-6109",
+      source: "Zenodo / Medical Physics / IPPT PAN",
+      provenance_source: "Medical Physics (Piotrzkowska-Wróblewska et al., 2017) & Zenodo 545928",
+      loaded: false,
+      map_x: 558,
+      map_y: 105
+    },
+    {
+      name: "BrEaST",
+      dataset_name: "BrEaST (Curated Benchmark Dataset for Ultrasound-Based Breast Lesion Analysis)",
+      country: "Poland",
+      collection_country: "Poland",
+      location: "Kraków & Wrocław",
+      collection_location: "Kraków & Wrocław (Maria Sklodowska-Curie Oncology Kraków & Lower Silesian Oncology Center)",
+      images: 256,
+      image_count: 256,
+      count_type: "publication-reported",
+      sample_unit: "scans",
+      cohort_details: "256 patients (256 scans: 154 benign, 98 malignant, 4 normal) across 4 probe types",
+      access: "Public · CC BY 4.0",
+      href: "https://www.cancerimagingarchive.net/collection/breast-lesions-usg/",
+      source_url: "https://www.cancerimagingarchive.net/collection/breast-lesions-usg/",
+      publication_url: "https://doi.org/10.1038/s41597-024-02984-z",
+      citation: "Pawłowska et al. (2024), Nature Scientific Data 11:132",
+      source: "TCIA / Nature Scientific Data",
+      provenance_source: "Nature Scientific Data (Pawłowska et al., 2024) & TCIA Breast-Lesions-USG",
+      loaded: false,
+      map_x: 555,
+      map_y: 111
+    },
+    {
+      name: "HMSS",
+      dataset_name: "HMSS (UltrasoundCases Breast & Axilla Archive)",
+      country: "Netherlands",
+      collection_country: "Netherlands",
+      location: "Eindhoven",
+      collection_location: "Eindhoven (Hitachi Medical Systems Europe)",
+      images: 503,
+      image_count: 503,
+      count_type: "source-reported",
+      sample_unit: "cases",
+      cohort_details: "503 educational breast and axilla ultrasound cases with biopsy-confirmed pathology findings",
+      access: "Public educational repository",
+      href: "https://www.ultrasoundcases.info/cases/breast-and-axilla/",
+      source_url: "https://www.ultrasoundcases.info/cases/breast-and-axilla/",
+      publication_url: "https://www.ultrasoundcases.info/",
+      citation: "Hitachi Medical Systems Europe. (2024). UltrasoundCases: Breast and axilla case collection.",
+      provenance_source: "UltrasoundCases.info public repository",
+      source: "Hitachi Medical Systems / ultrasoundcases.info",
+      loaded: false,
+      map_x: 515,
+      map_y: 107
+    },
+    {
+      name: "BUSIS",
+      dataset_name: "BUSIS (Benchmark for Breast Ultrasound Image Segmentation)",
+      country: "China",
+      collection_country: "China",
+      location: "Harbin, Qingdao & Shijiazhuang",
+      collection_location: "Harbin, Qingdao, and Shijiazhuang (2nd Affiliated Hosp Harbin, Affiliated Hosp Qingdao, 2nd Hosp Hebei)",
+      images: 562,
+      image_count: 562,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "562 B-mode breast ultrasound images from women aged 26-78 annotated by 4 radiologists",
+      access: "Public research benchmark",
+      href: "http://cvprip.cs.usu.edu/busbench",
+      source_url: "http://cvprip.cs.usu.edu/busbench",
+      publication_url: "https://doi.org/10.3390/healthcare10040729",
+      citation: "Zhang et al. (2022), Healthcare 10(4):729",
+      source: "Utah State Univ. / MDPI Healthcare",
+      provenance_source: "Healthcare (Zhang et al., 2022) & Utah State Univ. CVPRIP benchmark",
+      loaded: false,
+      map_x: 818,
+      map_y: 144
+    },
+    {
+      name: "GDPH&SYSUCC",
+      dataset_name: "GDPH&SYSUCC Breast Ultrasound Dataset",
+      country: "China",
+      collection_country: "China",
+      location: "Guangzhou",
+      collection_location: "Guangzhou (Guangdong Provincial People's Hospital & Sun Yat-sen University Cancer Center)",
+      images: 2405,
+      image_count: 2405,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "2,405 B-mode images (886 benign, 1,519 malignant) from 1,202 patients",
+      access: "Public research dataset",
+      href: "https://github.com/yuhaomo/HoVerTrans",
+      source_url: "https://github.com/yuhaomo/HoVerTrans",
+      publication_url: "https://arxiv.org/abs/2205.08390",
+      citation: "Mo, Y., Han, C., Liu, Y., et al. (2022). HoVer-Trans: Anatomy-aware hover-transformer for ROI classification in breast ultrasound. arXiv:2205.08390.",
+      provenance_source: "arXiv:2205.08390 & HoVerTrans repository",
+      source: "Sun Yat-sen Univ / GDPH",
+      loaded: false,
+      map_x: 815,
+      map_y: 186
+    },
+    {
+      name: "US3M",
+      dataset_name: "US3M (Multimodal Breast Ultrasound Dataset)",
+      country: "China",
+      collection_country: "China",
+      location: "Changsha",
+      collection_location: "Changsha (Xiangya Hospital, Central South University)",
+      images: 1532,
+      image_count: 1532,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "1,532 multimodal breast ultrasound images (B-mode and color Doppler) from 248 patients",
+      access: "Public · CC BY-NC 4.0",
+      href: "https://www.kaggle.com/datasets/timesxy/multimodal-breast-ultrasound-dataset-us3m",
+      source_url: "https://www.kaggle.com/datasets/timesxy/multimodal-breast-ultrasound-dataset-us3m",
+      publication_url: "https://doi.org/10.1016/j.inffus.2024.102604",
+      citation: "Yan, P., Gong, W., Li, M., et al. (2024). TDF-Net: Trusted dynamic fusion network for multimodal breast ultrasound diagnosis. Information Fusion, 102604.",
+      provenance_source: "Information Fusion (Yan et al., 2024) & Kaggle US3M portal",
+      source: "Central South Univ / Kaggle",
+      loaded: false,
+      map_x: 814,
+      map_y: 172
+    },
+    {
+      name: "BUSI_WHU",
+      dataset_name: "BUSI_WHU (Breast Cancer Ultrasound Image Dataset)",
+      country: "China",
+      collection_country: "China",
+      location: "Wuhan",
+      collection_location: "Wuhan (Wuhan University)",
+      images: 927,
+      image_count: 927,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "927 B-mode breast ultrasound images with lesion segmentation masks",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/k6cpmwybk3/1",
+      source_url: "https://data.mendeley.com/datasets/k6cpmwybk3/1",
+      publication_url: null,
+      citation: "Huang et al. (2023), Mendeley Data, V1",
+      source: "Mendeley Data",
+      provenance_source: "Mendeley Data V1 (Huang et al., 2023)",
+      loaded: false,
+      map_x: 818,
+      map_y: 165
+    },
+    {
+      name: "BreastVid",
+      dataset_name: "BreastVid (Breast Lesion Detection in Ultrasound Videos)",
+      country: "China",
+      collection_country: "China",
+      location: "Shenzhen",
+      collection_location: "Shenzhen (Shenzhen Institute of Advanced Technology & Affiliated Hospitals)",
+      images: 188,
+      image_count: 188,
+      count_type: "publication-reported",
+      sample_unit: "videos/images",
+      cohort_details: "188 ultrasound videos and image frames (75 benign, 113 malignant) with bounding boxes",
+      access: "Public research dataset",
+      href: "https://github.com/jhl-Det/CVA-Net",
+      source_url: "https://github.com/jhl-Det/CVA-Net",
+      publication_url: "https://doi.org/10.1007/978-3-031-16437-8_59",
+      citation: "Lin, Z., Lin, J., Zhu, L., et al. (2022). A new dataset and a baseline model for breast lesion detection in ultrasound video. MICCAI 2022.",
+      provenance_source: "MICCAI 2022 (Lin et al.) & CVA-Net repository",
+      source: "SIAT / Springer MICCAI",
+      loaded: false,
+      map_x: 817,
+      map_y: 187
+    },
+    {
+      name: "ALN-Ultra",
+      dataset_name: "ALN-Ultra (Axillary Lymph Node & Breast Ultrasound Dataset)",
+      country: "China",
+      collection_country: "China",
+      location: "Fuzhou",
+      collection_location: "Fuzhou (Fuzhou University Affiliated Provincial Hospital)",
+      images: 258,
+      image_count: 258,
+      count_type: "source-reported",
+      sample_unit: "images/videos",
+      cohort_details: "258 breast ultrasound images and videos with lesion classification",
+      access: "Public · CC BY 4.0",
+      href: "https://zenodo.org/records/15003119",
+      source_url: "https://zenodo.org/records/15003119",
+      publication_url: "https://doi.org/10.5281/zenodo.15003119",
+      citation: "Fuzhou University Affiliated Provincial Hospital. (2025). ALN-Ultra. Zenodo.",
+      provenance_source: "Zenodo record 15003119",
+      source: "Zenodo / Fuzhou Univ",
+      loaded: false,
+      map_x: 831,
+      map_y: 178
+    },
+    {
+      name: "MID",
+      dataset_name: "MID (Online Medical Images Breast Ultrasound)",
+      country: "Thailand",
+      collection_country: "Thailand",
+      location: "Bangkok",
+      collection_location: "Bangkok (Online Medical Images archive)",
+      images: 296,
+      image_count: 296,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "296 breast ultrasound scan images classified into benign and malignant lesions",
+      access: "Public educational repository",
+      href: "http://onlinemedicalimages.com/index.php/en/site-map",
+      source_url: "http://onlinemedicalimages.com/index.php/en/site-map",
+      publication_url: "http://onlinemedicalimages.com/",
+      citation: "OnlineMedicalImages. (2023). Breast Ultrasound Image Database.",
+      provenance_source: "OnlineMedicalImages.com public database",
+      source: "OnlineMedicalImages.com",
+      loaded: false,
+      map_x: 779,
+      map_y: 212
+    },
+    {
+      name: "BUS_UC",
+      dataset_name: "BUS_UC",
+      country: "Pakistan",
+      collection_country: "Pakistan",
+      location: null,
+      collection_location: null,
+      images: 811,
+      image_count: 811,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "811 B-mode images (358 benign, 453 malignant) with lesion masks",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/3ksd7w7jkx/1",
+      source_url: "https://data.mendeley.com/datasets/3ksd7w7jkx/1",
+      publication_url: "https://doi.org/10.1016/j.eswa.2023.121476",
+      citation: "Iqbal et al. (2023), Expert Systems with Applications",
+      source: "Mendeley Data",
+      provenance_source: "Expert Systems with Applications & Mendeley Data",
+      loaded: false,
+      map_x: 702,
+      map_y: 156
+    },
+    {
+      name: "QAMEBI",
+      dataset_name: "QAMEBI (Breast Ultrasound Images Database)",
+      country: "Iran",
+      collection_country: "Iran",
+      location: "Urmia",
+      collection_location: "Urmia (Urmia University of Medical Sciences)",
+      images: 232,
+      image_count: 232,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "232 B-mode ultrasound images (109 benign, 123 malignant) with expert lesion masks",
+      access: "Public research database",
+      href: "https://qamebi.com/breast-ultrasound-images-database",
+      source_url: "https://qamebi.com/breast-ultrasound-images-database",
+      publication_url: "https://doi.org/10.1016/j.compbiomed.2022.106465",
+      citation: "Ardakani et al. (2022), Computers in Biology and Medicine 151:106465",
+      source: "QAMEBI / Computers in Biology and Medicine",
+      provenance_source: "Computers in Biology and Medicine & QAMEBI database",
+      loaded: false,
+      map_x: 625,
+      map_y: 146
+    },
+    {
+      name: "MMU-A",
+      dataset_name: "MMU Dataset A (Breast Ultrasound Lesion Detection Dataset)",
+      country: "United Kingdom",
+      collection_country: "United Kingdom",
+      location: "Manchester",
+      collection_location: "Manchester (Manchester Metropolitan University)",
+      images: 306,
+      image_count: 306,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "306 breast ultrasound images (246 benign, 60 malignant) with radiologist lesion annotations",
+      access: "Research access by request",
+      href: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      source_url: "https://helward.mmu.ac.uk/STAFF/m.yap/dataset.php",
+      publication_url: "https://doi.org/10.1109/JBHI.2017.2731873",
+      citation: "Yap, M. H., Pons, G., Martí, J., et al. (2018). Automated breast ultrasound lesions detection using convolutional neural networks. IEEE JBHI, 22(4), 1218-1226.",
+      source: "MMU / IEEE JBHI",
+      provenance_source: "IEEE JBHI & Manchester Metropolitan University repository",
+      loaded: false,
+      map_x: 494,
+      map_y: 101
+    },
+    {
+      name: "AI-Hub Korea",
+      dataset_name: "AI-Hub Breast Cancer Ultrasound Dataset (유방암 진단 의료 영상)",
+      country: "South Korea",
+      collection_country: "South Korea",
+      location: "Seoul",
+      collection_location: "Seoul & Participating Medical Centers (National Information Society Agency)",
+      images: 1200,
+      image_count: 1200,
+      count_type: "source-reported",
+      sample_unit: "patient cases",
+      cohort_details: "1,200 patient ultrasound cases (600 benign, 600 malignant) curated for Korean AI medical imaging research",
+      access: "Public research access via AI-Hub Safe Zone",
+      href: "https://www.aihub.or.kr",
+      source_url: "https://www.aihub.or.kr",
+      publication_url: "https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=realm&dataSetSn=175",
+      citation: "National Information Society Agency (NIA). (2020). Breast Cancer Diagnostic Medical Imaging Dataset. AI-Hub Korea.",
+      source: "AI-Hub / NIA South Korea",
+      provenance_source: "AI-Hub Korea (National Information Society Agency / MSIT)",
+      loaded: false,
+      map_x: 853,
+      map_y: 146
+    },
+    {
+      name: "TDSC-ABUS",
+      dataset_name: "TDSC-ABUS (Tumor Detection & Segmentation on 3D Automated Breast Ultrasound)",
+      country: "China",
+      collection_country: "China",
+      location: "Shenzhen & Guangzhou",
+      collection_location: "Shenzhen & Guangzhou (Perception Computing Lab & Collaborating Centers)",
+      images: 100,
+      image_count: 100,
+      count_type: "publication-reported",
+      sample_unit: "3D ABUS volumes",
+      cohort_details: "100 automated 3D breast ultrasound volumes with lesion masks and benign/malignant pathology labels",
+      access: "Public benchmark challenge",
+      href: "https://tdsc-abus2023.grand-challenge.org/",
+      source_url: "https://tdsc-abus2023.grand-challenge.org/",
+      publication_url: "https://arxiv.org/abs/2501.15588",
+      citation: "Perception Computing Lab. (2023). TDSC-ABUS Challenge Dataset. Grand Challenge.",
+      source: "Perception Computing Lab / Grand Challenge",
+      provenance_source: "TDSC-ABUS Challenge / arXiv:2501.15588",
+      loaded: false,
+      map_x: 817,
+      map_y: 187
+    },
+    {
+      name: "CADBUSI",
+      dataset_name: "CADBUSI (Computer-Aided Diagnosis for Breast Ultrasound Imaging)",
+      country: "United States",
+      collection_country: "United States",
+      location: "Rochester, MN",
+      collection_location: "Rochester, Minnesota (Mayo Clinic Health System)",
+      images: 756315,
+      image_count: 756315,
+      count_type: "publication-reported",
+      sample_unit: "images",
+      cohort_details: "79,281 exams across 60,688 patients; 756,315 images & 136,197 videos (68,645 benign, 10,636 malignant)",
+      access: "Public clinical research cohort · Mayo Clinic",
+      href: "https://doi.org/10.1007/s10278-025-01784-0",
+      source_url: "https://doi.org/10.1007/s10278-025-01784-0",
+      publication_url: "https://doi.org/10.1007/s10278-025-01784-0",
+      citation: "Hansen, T., et al. (2026). Computer-Aided Diagnosis for Breast Ultrasound Imagery Dataset. Journal of Imaging Informatics in Medicine, 10.1007/s10278-025-01784-0.",
+      source: "Mayo Clinic Health System / JIIM",
+      provenance_source: "Journal of Imaging Informatics in Medicine & Mayo Clinic Health System",
+      loaded: false,
+      map_x: 195,
+      map_y: 145
+    },
+    {
+      name: "BUI-FEI",
+      dataset_name: "BUI-FEI (Breast Ultrasound Image Dataset by Rodrigues)",
+      country: "Brazil",
+      collection_country: "Brazil",
+      location: "São Paulo",
+      collection_location: "São Bernardo do Campo, São Paulo (Centro Universitário FEI)",
+      images: 250,
+      image_count: 250,
+      count_type: "source-reported",
+      sample_unit: "images",
+      cohort_details: "250 ultrasound images from female patients (100 benign, 150 malignant)",
+      access: "Public · CC BY 4.0",
+      href: "https://data.mendeley.com/datasets/wmy84gzngw/1",
+      source_url: "https://data.mendeley.com/datasets/wmy84gzngw/1",
+      publication_url: "https://doi.org/10.17632/wmy84gzngw.1",
+      citation: "Rodrigues, P. S. (2017). Breast Ultrasound Image. Mendeley Data, V1, doi: 10.17632/wmy84gzngw.1.",
+      source: "Centro Universitário FEI / Mendeley Data",
+      provenance_source: "Mendeley Data & Centro Universitário FEI",
+      loaded: false,
+      map_x: 335,
+      map_y: 325
+    }
   ];
 
   // ---------------------------------------------------------------------
@@ -1018,37 +1516,188 @@
   });
 
   const atlasSearch = $("atlasSearch");
-  if (atlasSearch) atlasSearch.addEventListener("input", () => renderAtlas(atlasSearch.value));
+  if (atlasSearch) {
+    atlasSearch.addEventListener("input", () => {
+      const q = atlasSearch.value.trim().toLowerCase();
+      const match = Object.keys(COUNTRY_FOCAL_POINTS).find(c => c.toLowerCase() === q);
+      if (match) {
+        selectMapCountry(match, true);
+      } else {
+        renderAtlas(atlasSearch.value);
+      }
+    });
+    atlasSearch.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const q = atlasSearch.value.trim().toLowerCase();
+        const match = Object.keys(COUNTRY_FOCAL_POINTS).find(c => c.toLowerCase() === q);
+        if (match) {
+          selectMapCountry(match, true);
+        }
+      }
+    });
+  }
   const atlasSearchClear = $("atlasSearchClear");
   if (atlasSearchClear) atlasSearchClear.addEventListener("click", () => {
     atlasSearch.value = "";
-    state.atlasLocation = "Egypt";
-    renderAtlas("");
+    state.atlasLocation = "all";
+    resetMapZoom();
+    renderAtlas("all");
     atlasSearch.focus();
   });
-  document.addEventListener("click", e => {
-    const pin = e.target.closest("[data-atlas-location]");
-    if (!pin) return;
-    state.atlasLocation = pin.dataset.atlasLocation;
-    if (atlasSearch) atlasSearch.value = state.atlasLocation;
-    renderAtlas(state.atlasLocation);
-  });
-  const globeMotionToggle = $("globeMotionToggle");
-  const atlasGlobe = $("atlasGlobe");
-  if (globeMotionToggle && atlasGlobe) {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      atlasGlobe.classList.add("globe-static");
-      globeMotionToggle.setAttribute("aria-pressed", "false");
-      globeMotionToggle.textContent = "Motion reduced";
-      globeMotionToggle.disabled = true;
-    } else {
-      globeMotionToggle.addEventListener("click", () => {
-        const spinning = globeMotionToggle.getAttribute("aria-pressed") === "true";
-        globeMotionToggle.setAttribute("aria-pressed", String(!spinning));
-        atlasGlobe.classList.toggle("globe-static", spinning);
-        globeMotionToggle.textContent = spinning ? "Spin globe" : "Pause globe";
-      });
+
+  const mapViewport = $("mapViewport");
+  const mapZoomIn = $("mapZoomIn");
+  const mapZoomOut = $("mapZoomOut");
+  const mapZoomReset = $("mapZoomReset");
+
+  if (mapZoomIn) mapZoomIn.addEventListener("click", () => zoomMap(1.3));
+  if (mapZoomOut) mapZoomOut.addEventListener("click", () => zoomMap(1 / 1.3));
+  if (mapZoomReset) {
+    mapZoomReset.addEventListener("click", () => {
+      resetMapZoom();
+      renderAtlas("all");
+    });
+  }
+
+  if (mapViewport) {
+    // Wheel zoom centered on cursor
+    mapViewport.addEventListener("wheel", e => {
+      e.preventDefault();
+      const rect = mapViewport.getBoundingClientRect();
+      const normX = Math.max(0, Math.min(1, (e.clientX - rect.left) / (rect.width || 1000)));
+      const normY = Math.max(0, Math.min(1, (e.clientY - rect.top) / (rect.height || 500)));
+      const focalSvgX = normX * 1000;
+      const focalSvgY = normY * 500;
+      const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+      zoomMap(factor, focalSvgX, focalSvgY);
+    }, { passive: false });
+
+    // Drag to pan
+    let potentialCountryTarget = null;
+
+    mapViewport.addEventListener("pointerdown", e => {
+      if (e.target.closest("button")) return;
+      const countryEl = e.target.closest("[data-atlas-country]");
+      potentialCountryTarget = countryEl ? countryEl.dataset.atlasCountry : null;
+      mapState.isDragging = true;
+      mapState.dragMoved = false;
+      mapState.startX = e.clientX;
+      mapState.startY = e.clientY;
+      mapState.startPanX = mapState.panX;
+      mapState.startPanY = mapState.panY;
+    });
+
+    mapViewport.addEventListener("pointermove", e => {
+      if (!mapState.isDragging) return;
+      const dx = e.clientX - mapState.startX;
+      const dy = e.clientY - mapState.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        if (!mapState.dragMoved) {
+          mapState.dragMoved = true;
+          try { mapViewport.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+      }
+      if (!mapState.dragMoved) return;
+
+      const rect = mapViewport.getBoundingClientRect();
+      const scaleSvgX = 1000 / (rect.width || 1000);
+      const scaleSvgY = 500 / (rect.height || 500);
+
+      const targetPanX = mapState.startPanX + dx * scaleSvgX;
+      const targetPanY = mapState.startPanY + dy * scaleSvgY;
+      const clamped = clampPan(targetPanX, targetPanY, mapState.scale);
+      mapState.panX = clamped.panX;
+      mapState.panY = clamped.panY;
+      applyMapTransform();
+    });
+
+    let lastCountryClickTime = 0;
+    function handleCountryClick(countryName) {
+      if (!countryName) return;
+      const now = Date.now();
+      if (now - lastCountryClickTime < 300) return;
+      lastCountryClickTime = now;
+      selectMapCountry(countryName, true);
     }
+
+    function endDrag(e) {
+      if (mapState.isDragging) {
+        const wasDrag = mapState.dragMoved;
+        mapState.isDragging = false;
+        try { mapViewport.releasePointerCapture(e.pointerId); } catch (_) {}
+        applyMapTransform();
+
+        if (!wasDrag && potentialCountryTarget) {
+          handleCountryClick(potentialCountryTarget);
+          potentialCountryTarget = null;
+        }
+      }
+    }
+    mapViewport.addEventListener("pointerup", endDrag);
+    mapViewport.addEventListener("pointercancel", endDrag);
+
+    // Keyboard navigation when viewport focused
+    mapViewport.addEventListener("keydown", e => {
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        zoomMap(1.25);
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        zoomMap(1 / 1.25);
+      } else if (e.key === "0" || e.key === "Home") {
+        e.preventDefault();
+        resetMapZoom();
+        renderAtlas("all");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        mapState.panX = Math.min(0, mapState.panX + 50);
+        applyMapTransform();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const minPanX = 1000 - 1000 * mapState.scale;
+        mapState.panX = Math.max(minPanX, mapState.panX - 50);
+        applyMapTransform();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        mapState.panY = Math.min(0, mapState.panY + 30);
+        applyMapTransform();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const minPanY = 500 - 500 * mapState.scale;
+        mapState.panY = Math.max(minPanY, mapState.panY - 30);
+        applyMapTransform();
+      }
+    });
+  }
+
+  // Click on country shape or marker
+  document.addEventListener("click", e => {
+    if (mapState.dragMoved) return;
+    const countryEl = e.target.closest("[data-atlas-country]");
+    if (!countryEl) return;
+    const country = countryEl.dataset.atlasCountry;
+    if (country) {
+      handleCountryClick(country);
+    }
+  });
+
+  // Enter/Space key on country shape or marker
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const countryEl = e.target.closest("[data-atlas-country]");
+    if (!countryEl) return;
+    e.preventDefault();
+    const country = countryEl.dataset.atlasCountry;
+    if (country) {
+      handleCountryClick(country);
+    }
+  });
+
+  const atlasRefreshBtn = $("atlasRefreshBtn");
+  if (atlasRefreshBtn) {
+    atlasRefreshBtn.addEventListener("click", () => {
+      loadAtlasCatalog(true);
+    });
   }
 
   const scanSweepScene = $("scanSweepScene");
@@ -1340,58 +1989,346 @@
   }
 
   // ---------------------------------------------------------------------
-  // Overview
+  // Overview: 2D Interactive World Map & Research Dataset Catalog
   // ---------------------------------------------------------------------
+  const COUNTRY_FOCAL_POINTS = {
+    "United States": { x: 195, y: 145, scale: 2.2 },
+    Egypt: { x: 587, y: 167, scale: 2.6 },
+    Brazil: { x: 335, y: 325, scale: 2.2 },
+    Spain: { x: 490, y: 145, scale: 3.2 },
+    Poland: { x: 556, y: 110, scale: 3.2 },
+    Netherlands: { x: 514, y: 109, scale: 3.8 },
+    "United Kingdom": { x: 494, y: 104, scale: 3.5 },
+    China: { x: 800, y: 165, scale: 2.2 },
+    "South Korea": { x: 855, y: 150, scale: 3.8 },
+    Thailand: { x: 780, y: 215, scale: 3.2 },
+    Pakistan: { x: 702, y: 160, scale: 2.8 },
+    Iran: { x: 638, y: 152, scale: 2.8 }
+  };
+
+  const mapState = {
+    scale: 1.0,
+    minScale: 1.0,
+    maxScale: 4.5,
+    panX: 0,
+    panY: 0,
+    isDragging: false,
+    dragMoved: false,
+    startX: 0,
+    startY: 0,
+    startPanX: 0,
+    startPanY: 0
+  };
+
+  function applyMapTransform() {
+    const group = $("mapTransformGroup");
+    const viewport = $("mapViewport");
+    const indicator = $("mapZoomLevel");
+    if (!group) return;
+
+    if (viewport) {
+      if (mapState.isDragging) viewport.classList.add("is-dragging");
+      else viewport.classList.remove("is-dragging");
+    }
+
+    group.style.transformOrigin = "0px 0px";
+    group.setAttribute("transform", `translate(${mapState.panX.toFixed(2)}, ${mapState.panY.toFixed(2)}) scale(${mapState.scale.toFixed(3)})`);
+    if (indicator) {
+      indicator.textContent = `${Math.round(mapState.scale * 100)}%`;
+    }
+  }
+
+  function clampPan(panX, panY, scale) {
+    if (scale <= 1.0) {
+      return { panX: 0, panY: 0 };
+    }
+    // Allow panning so any point from (0,0) to (1000,500) can comfortably reach viewport center (500, 250)
+    const minPanX = 500 - 1000 * scale;
+    const maxPanX = 500;
+    const minPanY = 250 - 500 * scale;
+    const maxPanY = 250;
+    return {
+      panX: Math.min(maxPanX, Math.max(minPanX, panX)),
+      panY: Math.min(maxPanY, Math.max(minPanY, panY))
+    };
+  }
+
+  function zoomMap(factor, focalSvgX = 500, focalSvgY = 250) {
+    const oldScale = mapState.scale;
+    let newScale = Math.max(mapState.minScale, Math.min(mapState.maxScale, oldScale * factor));
+    if (Math.abs(newScale - oldScale) < 0.001) return;
+
+    const ratio = newScale / oldScale;
+    let newPanX = focalSvgX - (focalSvgX - mapState.panX) * ratio;
+    let newPanY = focalSvgY - (focalSvgY - mapState.panY) * ratio;
+
+    const clamped = clampPan(newPanX, newPanY, newScale);
+    mapState.scale = newScale;
+    mapState.panX = clamped.panX;
+    mapState.panY = clamped.panY;
+    applyMapTransform();
+  }
+
+  function zoomToCountry(countryName) {
+    const focal = COUNTRY_FOCAL_POINTS[countryName];
+    if (!focal) return;
+    const targetScale = focal.scale || 2.4;
+    // Precisely center the country's focal coordinates (focal.x, focal.y) at viewport center (500, 250)
+    const targetPanX = 500 - focal.x * targetScale;
+    const targetPanY = 250 - focal.y * targetScale;
+
+    mapState.scale = targetScale;
+    mapState.panX = targetPanX;
+    mapState.panY = targetPanY;
+    applyMapTransform();
+  }
+
+  function resetMapZoom() {
+    mapState.scale = 1.0;
+    mapState.panX = 0;
+    mapState.panY = 0;
+    applyMapTransform();
+  }
+
+  function selectMapCountry(countryName, shouldZoom = true) {
+    if (!countryName) return;
+    const match = Object.keys(COUNTRY_FOCAL_POINTS).find(
+      c => c.toLowerCase() === countryName.toLowerCase()
+    );
+    const finalName = match || countryName;
+
+    // Toggle behavior: If the user clicks the same country again while zoomed in, zoom out to full wide view
+    const isCurrentActive = state.atlasLocation && state.atlasLocation.toLowerCase() === finalName.toLowerCase();
+    const isZoomedIn = mapState.scale > 1.05;
+
+    if (isCurrentActive && isZoomedIn) {
+      // Toggle OFF -> zoom out to worldwide view
+      state.atlasLocation = "all";
+      const searchInput = $("atlasSearch");
+      if (searchInput) searchInput.value = "";
+      resetMapZoom();
+      renderAtlas("all");
+      return;
+    }
+
+    // Toggle ON -> zoom in, center on country, and display its datasets
+    state.atlasLocation = finalName;
+    const searchInput = $("atlasSearch");
+    if (searchInput) {
+      searchInput.value = finalName;
+    }
+
+    if (shouldZoom && COUNTRY_FOCAL_POINTS[finalName]) {
+      zoomToCountry(finalName);
+    }
+
+    renderAtlas(finalName);
+  }
+
+  function renderMapMarkers() {
+    const layer = $("mapMarkersLayer");
+    if (!layer) return;
+
+    const countryMap = {};
+    ATLAS_DATASETS.forEach(d => {
+      const c = d.collection_country || d.country;
+      if (!c) return;
+      if (!countryMap[c]) countryMap[c] = [];
+      countryMap[c].push(d);
+    });
+
+    const entries = Object.keys(countryMap).map(c => {
+      const list = countryMap[c];
+      const focal = COUNTRY_FOCAL_POINTS[c] || { x: list[0].map_x || 500, y: list[0].map_y || 250, scale: 2.5 };
+      return { country: c, count: list.length, x: focal.x, y: focal.y, datasets: list };
+    });
+
+    layer.innerHTML = entries.map(item => {
+      const isActive = state.atlasLocation && state.atlasLocation.toLowerCase() === item.country.toLowerCase();
+      const labelText = `${item.country} (${item.count})`;
+      const badgeW = Math.max(54, labelText.length * 6.5 + 8);
+      const badgeX = item.x + 8;
+      const badgeY = item.y - 12;
+
+      return `<g class="map-marker ${isActive ? "active" : ""}" data-atlas-country="${esc(item.country)}" data-atlas-location="${esc(item.country)}" tabindex="0" role="button" aria-label="${esc(item.country)}: ${item.count} research datasets. Click to zoom in and view.">
+        <circle class="marker-halo" cx="${item.x}" cy="${item.y}" r="8"></circle>
+        <circle class="marker-dot" cx="${item.x}" cy="${item.y}" r="4.5"></circle>
+        <g transform="translate(${badgeX}, ${badgeY})">
+          <rect class="marker-badge-bg" x="0" y="-7" width="${badgeW}" height="14" rx="3"></rect>
+          <text class="marker-badge-text" x="${badgeW / 2}" y="0">${esc(labelText)}</text>
+        </g>
+      </g>`;
+    }).join("");
+  }
+
   function renderAtlas(query = "") {
     const summary = $("atlasSummary");
     const list = $("atlasDatasets");
     if (!summary || !list) return;
     const q = String(query).trim().toLowerCase();
-    const rows = ATLAS_DATASETS.filter(item => q
-      ? `${item.country} ${item.location || ""} ${item.name} ${item.access}`.toLowerCase().includes(q)
-      : item.country === state.atlasLocation);
-    const countries = [...new Set(rows.map(item => item.country))];
-    const imageCount = rows.reduce((total, item) => total + item.images, 0);
-    const heading = q
-      ? (countries.length === 1 ? countries[0] : `${countries.length} matching collection locations`)
-      : state.atlasLocation;
+    const isAll = q === "all" || (!q && state.atlasLocation === "all");
+
+    const rows = ATLAS_DATASETS.filter(item => {
+      if (isAll) return true;
+      if (!q) {
+        const country = (item.collection_country || item.country || "").toLowerCase();
+        return country === state.atlasLocation.toLowerCase();
+      }
+      const searchable = [
+        item.name,
+        item.dataset_name,
+        item.title,
+        item.country,
+        item.collection_country,
+        item.location,
+        item.collection_location,
+        item.access,
+        item.citation,
+        item.provenance_source
+      ].filter(Boolean).join(" ").toLowerCase();
+      return searchable.includes(q);
+    });
+
+    const countries = [...new Set(rows.map(item => item.collection_country || item.country).filter(Boolean))];
+    const heading = isAll
+      ? "Worldwide Research Catalog (all verified regions)"
+      : (q
+        ? (countries.length === 1 ? countries[0] : `${countries.length} matching research regions`)
+        : state.atlasLocation);
+
+    const activeLabel = $("mapActiveCountryLabel");
+    if (activeLabel) {
+      if (isAll) {
+        activeLabel.textContent = `Worldwide (${countries.length} regions · ${rows.length} datasets)`;
+      } else if (countries.length === 1) {
+        activeLabel.textContent = `${countries[0]} · ${rows.length} public research ${rows.length === 1 ? "dataset" : "datasets"}`;
+      } else if (countries.length > 1) {
+        activeLabel.textContent = `${countries.length} regions (${rows.length} datasets)`;
+      } else {
+        activeLabel.textContent = "Worldwide Research Map";
+      }
+    }
+
     summary.innerHTML = rows.length
-      ? `<strong>${esc(heading)}</strong><span>${rows.length} dataset ${rows.length === 1 ? "entry" : "entries"} · ${imageCount.toLocaleString()} reported samples</span>`
-      : `<strong>No catalog match</strong><span>Try a listed country or dataset name. No match does not mean no research exists there.</span>`;
+      ? `<strong>${esc(heading)}</strong><span>${rows.length} verified ${rows.length === 1 ? "dataset" : "datasets"} · publication- and source-reported counts listed per dataset (not summed)</span>`
+      : `<strong>No catalog match</strong><span>Try searching BUSI, BUS-BRA, UDIAT, OASBUD, BrEaST, China, Poland, Egypt, or Spain.</span>`;
 
     list.innerHTML = rows.map(item => {
-      const inAppCount = item.loaded && state.caseSource === "dataset" ? state.cases.length : null;
-      return `<article class="atlas-dataset-card">
-        <div class="atlas-dataset-top"><div><strong>${esc(item.name)}</strong><span>${esc(item.location ? `${item.location}, ${item.country}` : item.country)} · ${item.images.toLocaleString()} ${esc(item.sample_unit || "images")} listed</span></div><a href="${esc(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} source: ${esc(item.source)}">Source ↗</a></div>
-        <div class="atlas-dataset-foot"><span>${esc(item.access)}</span><span class="${inAppCount != null ? "atlas-loaded" : ""}">${inAppCount != null ? `${inAppCount.toLocaleString()} cases loaded here` : "Metadata only · not loaded here"}</span></div>
-        ${item.loaded ? `<button class="btn-link" type="button" data-tab="library">Browse BUSI cases in EchoAtlas →</button>` : ""}
+      const isLoaded = item.loaded && state.caseSource === "dataset";
+      const inAppCount = isLoaded ? state.cases.length : null;
+      const countLabel = item.image_count != null ? item.image_count.toLocaleString() : (item.images != null ? item.images.toLocaleString() : "Unknown");
+      const countType = item.count_type ? `(${esc(item.count_type)})` : "(reported sample count)";
+      const sourceUrl = item.source_url || item.href;
+      const pubUrl = item.publication_url;
+      const locationText = item.collection_location || item.location;
+      const countryText = item.collection_country || item.country;
+
+      return `<article class="atlas-dataset-card" tabindex="0" aria-label="${esc(item.name)} dataset details">
+        <div class="atlas-card-head">
+          <div>
+            <strong>${esc(item.name)}</strong>
+            <span style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-top:2px;">${esc(item.dataset_name || item.title || "")}</span>
+          </div>
+          <span class="atlas-card-badge ${item.loaded ? "loaded" : ""}">${item.loaded ? "Loaded in EchoAtlas" : "Catalog metadata"}</span>
+        </div>
+
+        <div class="atlas-meta-grid">
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Source facility:</span>
+            <span class="atlas-meta-val">${locationText && locationText !== "unknown" ? esc(locationText) : "<em>Unstated in source documentation</em>"}</span>
+          </div>
+          <div class="atlas-meta-note">Institutional research site · not individual patient locations</div>
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Country:</span>
+            <span class="atlas-meta-val">${esc(countryText || "Unknown")}</span>
+          </div>
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Reported samples:</span>
+            <span class="atlas-meta-val"><strong>${countLabel}</strong> ${esc(item.sample_unit || "images")} ${countType}</span>
+          </div>
+          ${item.cohort_details ? `<div class="atlas-meta-note">${esc(item.cohort_details)}</div>` : ""}
+
+          <div class="atlas-meta-row">
+            <span class="atlas-meta-label">Access &amp; license:</span>
+            <span class="atlas-meta-val">${esc(item.access || "Documented at source")}</span>
+          </div>
+        </div>
+
+        <div class="atlas-links">
+          ${sourceUrl ? `<a href="${esc(sourceUrl)}" class="atlas-link" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} official dataset source (opens in new tab)">Official dataset source ↗</a>` : ""}
+          ${pubUrl ? `<a href="${esc(pubUrl)}" class="atlas-link" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(item.name)} publication DOI (opens in new tab)">Publication / DOI ↗</a>` : ""}
+        </div>
+
+        ${item.provenance_source ? `<div class="atlas-card-provenance"><span style="color:var(--text-muted)">Verified source:</span> ${esc(item.provenance_source)}</div>` : ""}
+        ${item.loaded ? `<button class="btn-link" type="button" data-tab="library">Browse BUSI example cases in EchoAtlas (${inAppCount != null ? inAppCount : "sample"} loaded) →</button>` : ""}
       </article>`;
     }).join("");
 
-    document.querySelectorAll("[data-atlas-location]").forEach(pin => {
-      const active = q ? countries.includes(pin.dataset.atlasLocation) : pin.dataset.atlasLocation === state.atlasLocation;
-      pin.classList.toggle("active", active);
-      pin.setAttribute("aria-pressed", String(active));
+    // Synchronize active highlights on countries and markers
+    document.querySelectorAll(".map-country").forEach(elem => {
+      const c = elem.dataset.atlasCountry;
+      const active = !isAll && (q
+        ? countries.some(cnt => cnt && cnt.toLowerCase() === c.toLowerCase())
+        : (c && c.toLowerCase() === state.atlasLocation.toLowerCase()));
+      elem.classList.toggle("active", Boolean(active));
+      elem.setAttribute("aria-pressed", String(Boolean(active)));
     });
+
+    document.querySelectorAll(".map-marker").forEach(elem => {
+      const c = elem.dataset.atlasCountry;
+      const active = !isAll && (q
+        ? countries.some(cnt => cnt && cnt.toLowerCase() === c.toLowerCase())
+        : (c && c.toLowerCase() === state.atlasLocation.toLowerCase()));
+      elem.classList.toggle("active", Boolean(active));
+      elem.setAttribute("aria-pressed", String(Boolean(active)));
+    });
+
     const clear = $("atlasSearchClear");
     if (clear) clear.hidden = !q;
   }
 
-  async function loadAtlasCatalog() {
+  async function loadAtlasCatalog(forceRefresh = false) {
     const status = $("atlasDataStatus");
-    if (status) status.textContent = "Refreshing public GitHub catalog…";
+    const dot = $("atlasStatusDot");
+    const refreshBtn = $("atlasRefreshBtn");
+    if (status) status.textContent = forceRefresh ? "Refreshing source catalog…" : "Checking catalog source…";
+    if (refreshBtn) refreshBtn.disabled = true;
     try {
-      const response = await fetch(`${API_BASE}/api/dataset-atlas`, { headers: { Accept: "application/json" } });
+      const url = forceRefresh ? `${API_BASE}/api/dataset-atlas?refresh=true` : `${API_BASE}/api/dataset-atlas`;
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`Catalog request returned ${response.status}`);
       const payload = await response.json();
       if (!Array.isArray(payload.datasets) || payload.datasets.length === 0) throw new Error("Catalog response had no dataset entries");
       ATLAS_DATASETS = payload.datasets;
-      const fetchedAt = payload.fetched_at ? new Date(payload.fetched_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "just now";
-      if (status) status.textContent = `${payload.stale ? "Cached" : "Live GitHub catalog"} · checked ${fetchedAt}`;
-      renderAtlas(atlasSearch ? atlasSearch.value : "");
+      renderMapMarkers();
+      const timeStr = payload.last_checked_at || payload.fetched_at;
+      const checkedAt = timeStr ? new Date(timeStr).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "just now";
+
+      if (dot) {
+        dot.className = "pulse-dot";
+        if (payload.status === "fallback") dot.classList.add("pulse-error");
+        else if (payload.status === "cached") dot.classList.add("pulse-cached");
+      }
+
+      if (status) {
+        if (payload.status === "live") {
+          status.textContent = `Live public catalog · checked ${checkedAt}`;
+        } else if (payload.status === "cached") {
+          status.textContent = `Cached catalog · checked ${checkedAt}`;
+        } else {
+          status.textContent = `Curated fallback (source unreachable) · checked ${checkedAt}`;
+        }
+      }
+      renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
     } catch (error) {
-      if (status) status.textContent = "Curated snapshot · GitHub refresh unavailable";
-      renderAtlas(atlasSearch ? atlasSearch.value : "");
+      if (dot) dot.className = "pulse-dot pulse-error";
+      if (status) status.textContent = "Curated fallback · source could not be refreshed";
+      renderMapMarkers();
+      renderAtlas($("atlasSearch") ? $("atlasSearch").value : "");
+    } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
     }
   }
 
@@ -2737,6 +3674,11 @@
     renderSidebarCases();
     renderLibrary();
     renderOverview();
+    renderMapMarkers();
+    applyMapTransform();
+    if (COUNTRY_FOCAL_POINTS[state.atlasLocation]) {
+      zoomToCountry(state.atlasLocation);
+    }
     loadAtlasCatalog();
     renderJourney();
     renderStatusDependents();
