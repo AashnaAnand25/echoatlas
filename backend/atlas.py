@@ -643,7 +643,7 @@ def fetch_openhub_markdown(timeout: float = 5.0) -> str:
     req = Request(
         OPENHUB_README_URL,
         headers={
-            "User-Agent": "EchoAtlas-Research-Map/1.0 (+https://github.com/AashnaAnand25/neuroaccess-codeada; educational/non-commercial)",
+            "User-Agent": "EchoAtlas-Research-Map/1.0 (+https://github.com/AashnaAnand25/echoatlas; educational/non-commercial)",
             "Accept": "text/plain, text/markdown; q=0.9",
         },
     )

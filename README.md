@@ -1,5 +1,7 @@
 # EchoAtlas — Code Ada 2026
 
+[Live demo](https://echoatlas-codeada.vercel.app) · [GitHub repository](https://github.com/AashnaAnand25/echoatlas)
+
 **Track:** Tech for Equity · **Event:** Code Ada 2026 — Flourish
 
 EchoAtlas is an educational breast-ultrasound case explorer. It lets learners browse de-identified BUSI cases, compare expert dataset masks with experimental model output, and read plain-language notes about the workflow and its limits. It is a hackathon research demo, not a diagnostic or clinical decision tool.
