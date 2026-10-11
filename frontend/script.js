@@ -931,6 +931,11 @@
     };
   }
 
+  function canRunModel() {
+    const m = state.model;
+    return m.online && m.loaded && m.compatible && (m.mode === "trained" || m.mode === "trained-baseline");
+  }
+
   async function checkApiStatus() {
     const t0 = performance.now();
     try {
@@ -1067,7 +1072,13 @@
     setText("guidedTourProgress", `Step ${tour.step + 1} of ${GUIDED_TOUR_STEPS.length}`);
     $("guidedTourProgressBar").style.width = `${((tour.step + 1) / GUIDED_TOUR_STEPS.length) * 100}%`;
     title.textContent = step.title;
-    description.textContent = isExpectedTab ? step.description : (tour.step === 0 ? "Open the case library to choose an example." : "Return to your selected case to continue the walkthrough.");
+    description.textContent = isExpectedTab
+      ? step.description
+      : tour.step === 0
+        ? "Open the case library to choose an example."
+        : tour.step === 4
+          ? "Open the comparison view to see the dataset label and model output side by side."
+          : "Return to your selected case to continue the walkthrough.";
     back.hidden = tour.step === 0 || tour.busy;
     action.hidden = tour.step === 0 && isExpectedTab;
     action.disabled = tour.busy;
@@ -1080,14 +1091,18 @@
       action.textContent = caseData && caseData.annotationUrl ? (state.viewer.showAnnotation ? "Continue" : "Show dataset annotation") : "Continue";
       if (!caseData || !caseData.annotationUrl) description.textContent = "This case has no dataset annotation. Some cases do; custom uploads do not.";
     } else if (tour.step === 3) {
-      action.textContent = caseData && caseData.analysis ? "Review model output" : state.model.online ? "Run experimental model" : "Continue without model";
-      if (!caseData?.analysis && !state.model.online) description.textContent = "The model is offline right now. Continue to review the dataset label; no AI output will be shown.";
+      action.textContent = caseData && caseData.analysis ? "Review model output" : canRunModel() ? "Run experimental model" : "Continue without model";
+      if (!caseData?.analysis && !canRunModel()) {
+        description.textContent = state.model.online
+          ? "No compatible trained model is loaded. Continue to review the dataset label; no prediction will be shown."
+          : "The model service is offline. Continue to review the dataset label; no prediction will be shown.";
+      }
     } else if (tour.step === 4) {
       action.textContent = currentTab === "classification" ? "Finish walkthrough" : "Compare labels";
       if (!caseData?.analysis) description.textContent = "Review the dataset reference. The model output will clearly say if it is unavailable.";
     }
 
-    const targetSelectors = ["#libraryGrid .sample-scan-btn", "#mriViewport", "#toggleAnnotationBtn", state.model.online ? "#runModelBtn" : ".workspace-right-panel", ".model-lab-grid"];
+    const targetSelectors = ["#libraryGrid .sample-scan-btn", "#mriViewport", "#toggleAnnotationBtn", canRunModel() ? "#runModelBtn" : ".workspace-right-panel", ".model-lab-grid"];
     const target = isExpectedTab ? document.querySelector(targetSelectors[tour.step]) : null;
     if (tour.targetEl !== target) {
       if (tour.targetEl) tour.targetEl.classList.remove("guided-tour-target");
@@ -1129,7 +1144,7 @@
         switchTab("classification");
         return;
       }
-      if (state.model.online) {
+      if (canRunModel()) {
         tour.busy = true;
         renderGuidedTour();
         $("runModelBtn").click();
@@ -3064,8 +3079,8 @@
       switchTab("library");
       return;
     }
-    if (!state.model.online) {
-      showToast("The model API is offline, so no model output is available. The dataset annotation is still viewable.", "error");
+    if (!canRunModel()) {
+      showToast("No compatible trained model is ready. No prediction was made; the dataset annotation is still available.", "error");
       return;
     }
 
@@ -3093,6 +3108,10 @@
       analysis = interpretResult(result);
     } catch (err) {
       console.warn("Model request failed:", err);
+      const statusCode = Number(String(err && err.message || "").match(/HTTP (\d+)/)?.[1] || 0);
+      const note = [502, 503, 504].includes(statusCode) || err instanceof TypeError
+        ? "The experimental model is temporarily unavailable. No prediction was made. You can still review the dataset label and annotation."
+        : "We couldn't run the experimental model. No prediction was made. Please try again in a moment.";
       analysis = {
         ts: new Date().toLocaleString(),
         mode: "error",
@@ -3102,7 +3121,7 @@
         probabilities: null,
         maskUrl: null,
         latencyMs: null,
-        note: `The model request failed (${err.message}). No output is shown.`
+        note
       };
     }
 
