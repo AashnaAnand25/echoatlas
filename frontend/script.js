@@ -2188,17 +2188,23 @@
     const countries = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
     total.textContent = `${countries.length} countries · ${ATLAS_DATASETS.length} datasets`;
     grid.innerHTML = countries.map(([country, datasets]) => {
+      const flags = { Brazil: "🇧🇷", China: "🇨🇳", Egypt: "🇪🇬", Iran: "🇮🇷", Netherlands: "🇳🇱", Pakistan: "🇵🇰", Poland: "🇵🇱", "South Korea": "🇰🇷", Spain: "🇪🇸", Thailand: "🇹🇭", "United Kingdom": "🇬🇧", "United States": "🇺🇸" };
       const counts = datasets.map(dataset => {
         const count = dataset.image_count ?? dataset.images;
         const unit = dataset.sample_unit || "reported samples";
         const countText = count == null ? "—" : Number(count).toLocaleString();
         return `<span class="atlas-country-count"><strong>${countText}</strong><small>${esc(dataset.name)} · ${esc(unit)}</small></span>`;
-      }).join("");
+      });
       const active = state.atlasLocation.toLowerCase() === country.toLowerCase();
-      return `<button class="atlas-country-card" type="button" data-atlas-country="${esc(country)}" aria-pressed="${active}" aria-label="Show ${esc(country)} and its ${datasets.length} dataset${datasets.length === 1 ? "" : "s"} on the map">
-        <span class="atlas-country-name">${esc(country)}<small>${datasets.length} ${datasets.length === 1 ? "dataset" : "datasets"}</small></span>
-        <span class="atlas-country-counts">${counts}</span>
-      </button>`;
+      const more = counts.length > 2 ? `<details class="atlas-country-more"><summary>Show ${counts.length - 2} more datasets</summary><span class="atlas-country-counts">${counts.slice(2).join("")}</span></details>` : "";
+      return `<article class="atlas-country-card" data-selected="${active}">
+        <button class="atlas-country-select" type="button" data-atlas-country="${esc(country)}" aria-pressed="${active}" aria-label="Explore ${esc(country)} on the map">
+          <span class="atlas-country-name"><span><span aria-hidden="true">${flags[country] || "🌐"}</span> ${esc(country)}</span><span aria-hidden="true">↗</span></span>
+          <span class="atlas-country-dataset-label">${datasets.length} research ${datasets.length === 1 ? "dataset" : "datasets"}</span>
+        </button>
+        <span class="atlas-country-counts">${counts.slice(0, 2).join("")}</span>
+        ${more}
+      </article>`;
     }).join("");
   }
 
