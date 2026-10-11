@@ -993,6 +993,7 @@
     explainability: "Explainability",
     history: "History / Reports",
     sources: "Sources & Ethics",
+    settings: "Settings",
     chat: "AI Learning Guide"
   };
 
@@ -1428,7 +1429,7 @@
     });
     try {
       const response = await fetch(`${API_BASE}/api/assistant/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages })
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages, language: localStorage.getItem("echoatlas_language") || "en" })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || "The Gemini chat request failed. Please try again.");

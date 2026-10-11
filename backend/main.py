@@ -267,8 +267,10 @@ async def assistant_chat(request: FastAPIRequest):
         generation_config["thinkingConfig"] = {"thinkingLevel": "low", "includeThoughts": False}
     elif model_name.startswith("gemini-2.5-flash"):
         generation_config["thinkingConfig"] = {"thinkingBudget": 0, "includeThoughts": False}
+    languages = {"en": "English", "es": "Spanish", "ko": "Korean", "hi": "Hindi"}
+    reply_language = languages.get(payload.get("language"), "English")
     request_body = json.dumps({
-        "system_instruction": {"parts": [{"text": ECHOATLAS_CHAT_SYSTEM_PROMPT}]},
+        "system_instruction": {"parts": [{"text": ECHOATLAS_CHAT_SYSTEM_PROMPT + f" Reply in {reply_language}."}]},
         "contents": contents,
         "generationConfig": generation_config,
     }).encode("utf-8")

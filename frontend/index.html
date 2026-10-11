@@ -7,7 +7,7 @@
   <meta name="description" content="EchoAtlas is an educational, non-diagnostic breast-ultrasound case explorer: compare a public case's scan, its dataset annotation, and an experimental model mask.">
   <link rel="icon" type="image/svg+xml" href="echoatlas-mark.svg">
 
-  <link rel="stylesheet" href="style.css?v=20261011-map-hover-v3">
+  <link rel="stylesheet" href="style.css?v=20261011-settings-v4">
 
 </head>
 <body>
@@ -114,12 +114,26 @@
         </details>
 
 
+      <button class="sidebar-item settings-launch" type="button" data-tab="settings" aria-label="Accessibility settings"><span aria-hidden="true">⚙</span><span>Settings</span></button>
       </aside>
 
       <!-- ================================================== -->
       <!-- MAIN CONTENT VIEW CONTAINER                        -->
       <!-- ================================================== -->
       <main class="main-content" id="mainContent" tabindex="-1">
+        <section class="tab-view" id="view-settings" aria-labelledby="settingsTitle">
+          <h1 id="settingsTitle">Make yourself comfortable</h1>
+          <p id="settingsIntro">Choose what makes EchoAtlas easier to use. Your choices stay on this browser.</p>
+          <div class="accessibility-settings">
+            <label for="settingTheme"><span id="settingThemeLabel">Appearance</span><select id="settingTheme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+            <label for="settingText"><span id="settingTextLabel">Text size</span><select id="settingText"><option value="100">Standard</option><option value="115">Large</option><option value="130">Extra large</option></select></label>
+            <label for="settingMotion"><span id="settingMotionLabel">Reduce motion</span><input type="checkbox" id="settingMotion" /></label>
+            <label for="settingLanguage"><span id="settingLanguageLabel">Language</span><select id="settingLanguage"><option value="en">English</option><option value="es">Español</option><option value="ko">한국어</option><option value="hi">हिन्दी</option></select></label>
+            <p id="settingLanguageNote">Applies to navigation and AI guide replies. Dataset details and other lessons remain in English.</p>
+            <button type="button" class="btn btn-secondary" id="resetAccessibility">Reset settings</button>
+            <p id="settingsSaved" role="status" aria-live="polite"></p>
+          </div>
+        </section>
 
         <section class="guided-tour-panel" id="guidedTourPanel" aria-labelledby="guidedTourTitle" aria-live="polite" hidden>
           <div class="guided-tour-topline"><span class="guided-tour-step" id="guidedTourProgress">Step 1 of 5</span><button class="guided-tour-skip" id="guidedTourSkipBtn" type="button">Exit walkthrough</button></div>
@@ -1321,6 +1335,7 @@
   <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
   <!-- Application Script -->
-  <script src="script.js?v=20261011-map-hover-v3"></script>
+  <script src="script.js?v=20261011-settings-v4"></script>
+<script src="settings.js?v=20261011-settings-v4"></script>
 </body>
 </html>

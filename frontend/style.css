@@ -3511,3 +3511,12 @@ button:disabled, [aria-disabled="true"] {
     background: Highlight !important;
   }
 }
+
+/* Personal accessibility preferences */
+.settings-launch { margin-top:auto; border-top:1px solid var(--border-color); border-radius:0; padding-top:18px; gap:12px; }
+.accessibility-settings { max-width:600px; margin-top:24px; }
+.accessibility-settings label { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px 0; border-bottom:1px solid var(--border-color); font-size:1rem; }
+.accessibility-settings select { max-width:55%; min-height:44px; padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary); color:var(--text-primary); font:inherit; }
+.accessibility-settings input { width:24px; height:24px; accent-color:var(--accent-cyan); }
+.accessibility-settings p,#settingsIntro { color:var(--text-secondary); max-width:60ch; line-height:1.6; }
+html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html[data-reduce-motion="true"] *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
