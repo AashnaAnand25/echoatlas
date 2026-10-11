@@ -61,9 +61,9 @@ frontend/.env.*
 *.pt
 *.pth
 *.ckpt
-*.onnx
 *.h5
 *.keras
+!models/EchoAtlas_baseline.onnx
 
 # Ignore large datasets
 data/
@@ -95,3 +95,4 @@ Thumbs.db
 dist/
 build/
 .vercel
+_uv/

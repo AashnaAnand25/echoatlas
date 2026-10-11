@@ -8,7 +8,7 @@ EchoAtlas is an educational breast-ultrasound case explorer. It lets learners br
 
 - The EchoAtlas interface, accessible theme, case library, sources/ethics content, and BUSI API integration are in `main`.
 - A small U-Net baseline was trained from scratch for 20 epochs on the duplicate-grouped, stratified image split. This is separate from the MaskFormer in the supplied paper.
-- The local machine has the prepared BUSI data and baseline checkpoint. Raw data, checkpoint, and local metric JSON are intentionally excluded from Git; a fresh clone needs the data preparation and training steps below before it can return real BUSI predictions.
+- The local machine has the prepared BUSI data and original baseline checkpoint. Raw data, the `.pt` checkpoint, and local metric JSON are excluded from Git. The small ONNX export of the trained baseline is committed for CPU inference on Vercel; it contains model weights, not BUSI images or masks. A fresh clone can run ONNX inference after installing runtime requirements, while the original PyTorch training workflow still requires local data preparation.
 - Measured exploratory results are documented in [BASELINE_RESULTS.md](BASELINE_RESULTS.md). They are not clinical evidence and do not reproduce the paper's reported 0.943 mAP.
 - See [TEAM_PLAN.md](TEAM_PLAN.md) for team ownership, data caveats, and presentation plan.
 
@@ -74,7 +74,7 @@ Google's current REST format sends chat history in `contents`, a fixed education
 
 ## Vercel deployment
 
-The repository includes a FastAPI entry point for Vercel. Vercel installs only the lightweight dependencies in `requirements.txt`; install `requirements-training.txt` for local BUSI preparation and model training. The public GitHub repository does not contain the BUSI image files, manifest, or trained checkpoint, so a Vercel deployment can show the interface and public dataset atlas but cannot serve BUSI cases or run the U-Net until those assets are provided through an appropriately licensed private storage setup. Gemini is intentionally not configured on a public deployment by default: the chat endpoint currently has no user authentication or per-user quota, so do not add a personal API key to a public Vercel deployment. The local `.env` remains untracked.
+The repository includes a FastAPI entry point for Vercel. Vercel installs ONNX Runtime CPU dependencies from `requirements.txt` and loads the committed ONNX export for real uploaded-image inference; local development and training can continue to use PyTorch and the `.pt` checkpoint. The public GitHub repository does not contain BUSI images, masks, or the manifest, so hosted case-library data depends on the deployment's configured data source; the model can still run on an uploaded image. Gemini is intentionally not configured on a public deployment by default: the chat endpoint currently has no user authentication or per-user quota, so do not add a personal API key to a public Vercel deployment. The local `.env` remains untracked.
 
 ## License
 

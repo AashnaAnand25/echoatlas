@@ -1,10 +1,6 @@
 .env
 .env.*
 data/raw/**
-models/**
-uploads/**
-*.ipynb
-scripts/**
-.vscode/**
-__pycache__/**
-**/__pycache__/**
+models/*.pt
+models/*.pth
+models/*.ckpt

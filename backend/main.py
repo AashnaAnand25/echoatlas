@@ -34,9 +34,18 @@ except ImportError:
     from backend.atlas import get_dataset_atlas_payload
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
-MODEL_PATH = Path(os.environ.get(
-    "ECHOATLAS_MODEL_PATH", BASE_DIR / "models" / "EchoAtlas_baseline.pt"
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+if not IS_VERCEL:
+    load_dotenv(BASE_DIR / ".env")
+MODEL_PATH = (
+    Path(os.environ.get(
+        "ECHOATLAS_MODEL_PATH", BASE_DIR / "models" / "EchoAtlas_baseline.pt"
+    )).expanduser().resolve()
+    if not IS_VERCEL
+    else None
+)
+ONNX_MODEL_PATH = Path(os.environ.get(
+    "ECHOATLAS_ONNX_MODEL_PATH", BASE_DIR / "models" / "EchoAtlas_baseline.onnx"
 )).expanduser().resolve()
 FRONTEND_DIR = BASE_DIR / "frontend"
 DATASET_DIR = BASE_DIR / "data" / "Dataset_BUSI_with_GT"
@@ -110,10 +119,26 @@ else:
     else:
         device = torch.device("cpu")
     model, classes, model_load_error = load_model(str(MODEL_PATH), device)
+
+# Vercel uses a compact ONNX Runtime CPU build instead of packaging PyTorch.
+# Local runs continue to prefer the original .pt checkpoint above.
+inference_backend = "pytorch"
+if model is None:
+    try:
+        from backend.onnx_model import load_onnx_model
+        onnx_model, onnx_classes, onnx_error = load_onnx_model(ONNX_MODEL_PATH)
+    except ImportError:
+        onnx_model, onnx_classes, onnx_error = None, [], "ONNX Runtime is not installed."
+    if onnx_model is not None:
+        model, classes, model_load_error = onnx_model, onnx_classes, None
+        device = "cpu"
+        inference_backend = "onnxruntime"
+    elif model_load_error:
+        model_load_error = f"{model_load_error} {onnx_error}"
 if model is None:
     print(f"[WARNING] EchoAtlas inference unavailable: {model_load_error}")
 else:
-    print(f"[INFO] EchoAtlas trained baseline ready on {device} with classes: {classes}")
+    print(f"[INFO] EchoAtlas trained baseline ready via {inference_backend} on {device} with classes: {classes}")
 
 @app.get("/api/status")
 async def get_status():
@@ -140,9 +165,17 @@ async def get_status():
         "mode": "trained-baseline" if model is not None else "unavailable",
         "model_loaded": model is not None,
         "model_name": "EchoAtlas BUSI baseline",
-        "architecture": "Multi-task U-Net baseline (separate from paper's MaskFormer)",
+        "architecture": (
+            "Multi-task U-Net baseline (ONNX Runtime CPU; separate from paper's MaskFormer)"
+            if inference_backend == "onnxruntime"
+            else "Multi-task U-Net baseline (separate from paper's MaskFormer)"
+        ),
         "dataset": "BUSI",
-        "input_size": f"{getattr(model, 'image_size', 512)} x {getattr(model, 'image_size', 512)} grayscale",
+        "input_size": (
+            "256 x 256 grayscale"
+            if inference_backend == "onnxruntime"
+            else f"{getattr(model, 'image_size', 512)} x {getattr(model, 'image_size', 512)} grayscale"
+        ),
         "classes": classes,
         "load_error": model_load_error,
         "metrics": metrics,
@@ -339,8 +372,12 @@ async def predict(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        from backend.baseline import predict_image
-        result = predict_image(str(temp_path), model, classes, device)
+        if inference_backend == "onnxruntime":
+            from backend.onnx_model import predict_image_onnx
+            result = predict_image_onnx(str(temp_path), model, classes)
+        else:
+            from backend.baseline import predict_image
+            result = predict_image(str(temp_path), model, classes, device)
     except ImportError as exc:
         raise HTTPException(
             status_code=503,

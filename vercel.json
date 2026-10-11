@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2
+  "version": 2,
+  "functions": {
+    "app.py": {
+      "includeFiles": "{models/EchoAtlas_baseline.onnx,data/busi_manifest.csv,data/busi_baseline_metrics.json,data/Dataset_BUSI_with_GT/**}",
+      "excludeFiles": "{.codex-presentation-build/**,presentation/**,scripts/**,.vscode/**,_uv/**,**/*.ipynb,**/__pycache__/**,__pycache__/**,uploads/**,data/raw/**,models/*.pt,models/*.pth,models/*.ckpt,.env,.env.*}"
+    }
+  }
 }

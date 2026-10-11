@@ -3,3 +3,7 @@ fastapi>=0.100.0
 uvicorn>=0.22.0
 python-multipart>=0.0.6
 python-dotenv>=1.0.0
+# Compact CPU inference for the trained ONNX export (avoids bundling PyTorch).
+onnxruntime==1.31.0
+numpy>=1.26.0
+Pillow>=9.5.0
