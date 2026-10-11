@@ -2234,6 +2234,7 @@
       const badgeY = item.y - 12;
 
       return `<g class="map-marker ${isActive ? "active" : ""}" data-atlas-country="${esc(item.country)}" data-atlas-location="${esc(item.country)}" tabindex="0" role="button" aria-label="${esc(item.country)}: ${item.count} research datasets. Click to zoom in and view.">
+        <circle class="marker-hit-target" cx="${item.x}" cy="${item.y}" r="12"></circle>
         <circle class="marker-halo" cx="${item.x}" cy="${item.y}" r="8"></circle>
         <circle class="marker-dot" cx="${item.x}" cy="${item.y}" r="4.5"></circle>
         <g transform="translate(${badgeX}, ${badgeY})">

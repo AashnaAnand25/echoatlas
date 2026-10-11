@@ -1046,8 +1046,12 @@ h1, h2, h3, h4, h5, h6 {
 .map-country { fill:rgba(105,223,206,.16); stroke:rgba(105,223,206,.65); stroke-width:1.5; cursor:pointer; transition:all .18s ease; outline:none; }
 .map-country:hover,.map-country:focus-visible { fill:rgba(105,223,206,.42); stroke:#E6FFF9; stroke-width:2.4; filter:drop-shadow(0 0 8px rgba(105,223,206,.8)); }
 .map-country.active { fill:rgba(255,175,152,.38)!important; stroke:var(--accent-coral)!important; stroke-width:2.8!important; filter:drop-shadow(0 0 12px rgba(255,175,152,.85))!important; }
-.map-marker { cursor:pointer; outline:none; transition:transform .18s ease; }
-.map-marker:hover,.map-marker:focus-visible,.map-marker.active { transform:scale(1.22); }
+/* Keep SVG hit targets stationary: group scaling can cause hover oscillation. */
+.map-marker { cursor:pointer; outline:none; }
+.map-marker .marker-hit-target { fill:transparent; pointer-events:all; }
+.map-marker .marker-halo { pointer-events:none; }
+.map-marker:hover .marker-dot,.map-marker:focus-visible .marker-dot { fill:var(--accent-cyan); stroke:#FFF; stroke-width:2; filter:drop-shadow(0 0 4px var(--accent-cyan)); }
+.map-marker:hover .marker-badge-bg,.map-marker:focus-visible .marker-badge-bg { stroke:var(--accent-cyan); stroke-width:1.5; }
 .map-marker .marker-halo { fill:rgba(255,175,152,.2); stroke:rgba(255,175,152,.6); stroke-width:1; animation:map-pin-pulse 2.2s infinite ease-out; }
 .map-marker.active .marker-halo { fill:rgba(105,223,206,.3); stroke:var(--accent-cyan); }
 .map-marker .marker-dot { fill:var(--accent-coral); stroke:#FFF; stroke-width:1.5; }
