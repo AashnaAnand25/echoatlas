@@ -21,7 +21,7 @@ See [TEAM_PLAN.md](TEAM_PLAN.md) for the six-hour plan and ownership. The produc
 The official BUSI page is the source of record. If its download is unavailable, the [MedOtter Hugging Face mirror](https://huggingface.co/datasets/MedOtter/BUSI) provides a CC BY 4.0 parquet copy and documents its known caveats. The import below preserves the source labels and writes attribution into the extracted dataset folder:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-training.txt
 mkdir -p data/raw
 curl -L 'https://huggingface.co/datasets/MedOtter/BUSI/resolve/main/data/train-00000-of-00001.parquet?download=true' -o data/raw/busi-mirror-train.parquet
 python scripts/import_busi_parquet.py --parquet data/raw/busi-mirror-train.parquet --output data/Dataset_BUSI_with_GT
@@ -74,7 +74,7 @@ Google's current REST format sends chat history in `contents`, a fixed education
 
 ## Vercel deployment
 
-The repository includes a FastAPI entry point for Vercel. The public GitHub repository does not contain the BUSI image files, manifest, or trained checkpoint, so a Vercel deployment can show the interface and public dataset atlas but cannot serve BUSI cases or run the U-Net until those assets are provided through an appropriately licensed private storage setup. Gemini is intentionally not configured on a public deployment by default: the chat endpoint currently has no user authentication or per-user quota, so do not add a personal API key to a public Vercel deployment. The local `.env` remains untracked.
+The repository includes a FastAPI entry point for Vercel. Vercel installs only the lightweight dependencies in `requirements.txt`; install `requirements-training.txt` for local BUSI preparation and model training. The public GitHub repository does not contain the BUSI image files, manifest, or trained checkpoint, so a Vercel deployment can show the interface and public dataset atlas but cannot serve BUSI cases or run the U-Net until those assets are provided through an appropriately licensed private storage setup. Gemini is intentionally not configured on a public deployment by default: the chat endpoint currently has no user authentication or per-user quota, so do not add a personal API key to a public Vercel deployment. The local `.env` remains untracked.
 
 ## License
 

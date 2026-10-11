@@ -9,18 +9,28 @@ import uuid
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
-import torch
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# Support running directly or as module
+# The hosted learning UI and dataset atlas can run without the local ML stack.
 try:
-    from model import load_model
+    import torch
+except ImportError:
+    torch = None
+
+if torch is not None:
+    try:
+        from model import load_model
+    except ImportError:
+        from backend.model import load_model
+else:
+    load_model = None
+
+try:
     from atlas import get_dataset_atlas_payload
 except ImportError:
-    from backend.model import load_model
     from backend.atlas import get_dataset_atlas_payload
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -86,13 +96,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-    device = torch.device("mps")
+if torch is None:
+    device = "cpu"
+    model, classes, model_load_error = None, [], "PyTorch is not installed in this lightweight deployment."
 else:
-    device = torch.device("cpu")
-model, classes, model_load_error = load_model(str(MODEL_PATH), device)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    model, classes, model_load_error = load_model(str(MODEL_PATH), device)
 if model is None:
     print(f"[WARNING] EchoAtlas inference unavailable: {model_load_error}")
 else:
