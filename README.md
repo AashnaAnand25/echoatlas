@@ -72,6 +72,10 @@ Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/app/ap
 
 Google's current REST format sends chat history in `contents`, a fixed educational boundary in `system_instruction`, and the key in the server-side `x-goog-api-key` header. The default model can change as Google updates availability; see its [current model list](https://ai.google.dev/gemini-api/docs/models).
 
+## Vercel deployment
+
+The repository includes a FastAPI entry point for Vercel. The public GitHub repository does not contain the BUSI image files, manifest, or trained checkpoint, so a Vercel deployment can show the interface and public dataset atlas but cannot serve BUSI cases or run the U-Net until those assets are provided through an appropriately licensed private storage setup. Gemini is intentionally not configured on a public deployment by default: the chat endpoint currently has no user authentication or per-user quota, so do not add a personal API key to a public Vercel deployment. The local `.env` remains untracked.
+
 ## License
 
 See the retained [MIT License](LICENSE) and the upstream attribution above.
