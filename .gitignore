@@ -94,3 +94,4 @@ Thumbs.db
 .eggs/
 dist/
 build/
+.vercel
