@@ -1702,6 +1702,39 @@
 
   const scanSweepScene = $("scanSweepScene");
   const scanSweepToggle = $("scanSweepToggle");
+  const simStepStatus = $("simStepStatus");
+  const simStepBack = $("simStepBack");
+  const simStepNext = $("simStepNext");
+  const simStepMessages = [
+    "The probe sends a pulse into the tissue.",
+    "Echoes return from tissue boundaries; deeper echoes take longer.",
+    "The scanner maps echo timing and strength into a 2D image slice."
+  ];
+  function setSimulatorStep(step) {
+    if (!scanSweepScene) return;
+    const nextStep = Math.max(1, Math.min(3, Number(step) || 1));
+    scanSweepScene.dataset.simStep = String(nextStep);
+    scanSweepScene.classList.remove("sim-step-1", "sim-step-2", "sim-step-3");
+    scanSweepScene.classList.add(`sim-step-${nextStep}`);
+    scanSweepScene.setAttribute("aria-label", `Step ${nextStep} of 3: ${simStepMessages[nextStep - 1]}`);
+    document.querySelectorAll("[data-sim-step-button]").forEach(button => {
+      const active = Number(button.dataset.simStepButton) === nextStep;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
+    });
+    if (simStepStatus) simStepStatus.textContent = `Step ${nextStep} of 3 · ${simStepMessages[nextStep - 1]}`;
+    if (simStepBack) simStepBack.disabled = nextStep === 1;
+    if (simStepNext) {
+      simStepNext.disabled = nextStep === 3;
+      simStepNext.textContent = nextStep === 3 ? "Image built" : "Next step →";
+    }
+  }
+  document.querySelectorAll("[data-sim-step-button]").forEach(button => {
+    button.addEventListener("click", () => setSimulatorStep(button.dataset.simStepButton));
+  });
+  if (simStepBack) simStepBack.addEventListener("click", () => setSimulatorStep(Number(scanSweepScene?.dataset.simStep) - 1));
+  if (simStepNext) simStepNext.addEventListener("click", () => setSimulatorStep(Number(scanSweepScene?.dataset.simStep) + 1));
   if (scanSweepScene && scanSweepToggle) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       scanSweepScene.classList.remove("scan-sweep-playing");
