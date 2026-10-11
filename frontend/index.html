@@ -137,7 +137,7 @@
             <div>
               <p class="eyebrow mono">ECHOATLAS · BREAST ULTRASOUND LEARNING</p>
               <h1 class="view-title" id="title-overview" tabindex="-1">Learn from a case</h1>
-              <p class="view-subtitle">Explore a public ultrasound and compare the dataset’s marked area with an experimental AI mask.</p>
+              <p class="view-subtitle">Start with a short guide, then explore public scans at your own pace.</p>
             </div>
             <div class="view-header-actions">
               <button class="btn btn-primary" id="startGuidedTourBtn" type="button">Start guided walkthrough</button>
@@ -146,7 +146,7 @@
           </div>
 
           <details class="overview-context">
-            <summary>Explore dataset map and research context</summary>
+            <summary>Explore the research map and learning guide</summary>
             <div class="overview-context-content">
           <section class="card atlas-card" aria-labelledby="atlasTitle">
             <div class="card-header atlas-header">
@@ -157,6 +157,16 @@
               </div>
               <a class="source-chip" href="https://github.com/NKI-MedTech-AI/breast-ultrasound-openhub" target="_blank" rel="noopener noreferrer">Catalog source ↗</a>
             </div>
+            <section class="atlas-country-overview" aria-labelledby="atlasCountryOverviewTitle">
+              <div class="atlas-country-overview-heading">
+                <div>
+                  <h3 id="atlasCountryOverviewTitle">Reported samples by country</h3>
+                  <p>Each number comes from an individual dataset source. Some sources may overlap; these are not unique people.</p>
+                </div>
+                <span class="atlas-country-total mono" id="atlasCountryTotal" aria-live="polite"></span>
+              </div>
+              <div class="atlas-country-grid" id="atlasCountryGrid" aria-label="Public dataset sample counts by country"></div>
+            </section>
             <div class="atlas-layout">
               <div class="atlas-map-stage" id="atlasMapStage" role="region" aria-label="Interactive 2D World Map of public breast-ultrasound research datasets">
                 <!-- Map Header Bar with active country display & zoom toolbar -->
@@ -298,7 +308,31 @@
 
           <section class="card impact-context-card" aria-labelledby="impactContextTitle">
             <div class="impact-stat-block"><span class="eyebrow mono">GLOBAL CONTEXT · WHO 2024 ESTIMATE</span><strong>2.4M</strong><span>women diagnosed with breast cancer worldwide</span><small>694,000 deaths globally in 2024</small></div>
-            <div class="impact-context-copy"><h2 class="card-title" id="impactContextTitle">Learning should be accessible</h2><p class="card-desc">Breast cancer outcomes differ across regions. EchoAtlas offers public examples for learning; it has not been shown to change health outcomes.</p><div class="impact-context-actions"><a href="https://www.who.int/news-room/fact-sheets/detail/breast-cancer" target="_blank" rel="noopener noreferrer">WHO facts ↗</a><button class="btn btn-primary-sm" type="button" data-tab="practice">Try the practice lab</button></div></div>
+            <div class="impact-context-copy"><h2 class="card-title" id="impactContextTitle">Learning should be accessible</h2><p class="card-desc">The 2.4M figure is a global estimate, not the number of scans on this map. EchoAtlas makes a small set of public examples easier to explore; it has not been shown to change health outcomes.</p><div class="impact-context-actions"><a href="https://www.who.int/news-room/fact-sheets/detail/breast-cancer" target="_blank" rel="noopener noreferrer">WHO facts ↗</a><button class="btn btn-primary-sm" type="button" data-tab="practice">Try the practice lab</button></div></div>
+          </section>
+          <section class="overview-learning" aria-labelledby="overviewLearningTitle">
+            <div class="overview-learning-heading">
+              <p class="eyebrow mono">A QUICK FIELD GUIDE</p>
+              <h2 id="overviewLearningTitle">What you’ll learn here</h2>
+              <p>Three simple ideas make the case viewer easier to follow.</p>
+            </div>
+            <div class="overview-learning-grid">
+              <details class="overview-learning-card">
+                <summary><span>01</span><strong>Ultrasound uses echoes</strong><i aria-hidden="true">＋</i></summary>
+                <p>A probe sends sound pulses into tissue. Returning echoes become the pixels in a 2D image.</p>
+                <button class="btn-link" type="button" data-tab="simulator">See the probe simulator →</button>
+              </details>
+              <details class="overview-learning-card">
+                <summary><span>02</span><strong>An annotation is a reference</strong><i aria-hidden="true">＋</i></summary>
+                <p>A dataset mask marks an area for research and learning. It is not a diagnosis.</p>
+                <button class="btn-link" type="button" data-tab="library">Explore a case →</button>
+              </details>
+              <details class="overview-learning-card">
+                <summary><span>03</span><strong>A model can be wrong</strong><i aria-hidden="true">＋</i></summary>
+                <p>EchoAtlas’ experimental model can disagree with a dataset label. Compare them as separate information.</p>
+                <button class="btn-link" type="button" data-tab="classification">See how outputs are shown →</button>
+              </details>
+            </div>
           </section>
             </div>
           </details>

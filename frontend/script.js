@@ -1626,15 +1626,6 @@
       applyMapTransform();
     });
 
-    let lastCountryClickTime = 0;
-    function handleCountryClick(countryName) {
-      if (!countryName) return;
-      const now = Date.now();
-      if (now - lastCountryClickTime < 300) return;
-      lastCountryClickTime = now;
-      selectMapCountry(countryName, true);
-    }
-
     function endDrag(e) {
       if (mapState.isDragging) {
         const wasDrag = mapState.dragMoved;
@@ -2173,6 +2164,44 @@
     renderAtlas(finalName);
   }
 
+  let lastCountryClickTime = 0;
+  function handleCountryClick(countryName) {
+    if (!countryName) return;
+    const now = Date.now();
+    if (now - lastCountryClickTime < 300) return;
+    lastCountryClickTime = now;
+    selectMapCountry(countryName, true);
+  }
+
+  function renderAtlasCountryOverview() {
+    const grid = $("atlasCountryGrid");
+    const total = $("atlasCountryTotal");
+    if (!grid || !total) return;
+
+    const grouped = new Map();
+    ATLAS_DATASETS.forEach(dataset => {
+      const country = dataset.collection_country || dataset.country;
+      if (!country) return;
+      if (!grouped.has(country)) grouped.set(country, []);
+      grouped.get(country).push(dataset);
+    });
+    const countries = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+    total.textContent = `${countries.length} countries · ${ATLAS_DATASETS.length} datasets`;
+    grid.innerHTML = countries.map(([country, datasets]) => {
+      const counts = datasets.map(dataset => {
+        const count = dataset.image_count ?? dataset.images;
+        const unit = dataset.sample_unit || "reported samples";
+        const countText = count == null ? "—" : Number(count).toLocaleString();
+        return `<span class="atlas-country-count"><strong>${countText}</strong><small>${esc(dataset.name)} · ${esc(unit)}</small></span>`;
+      }).join("");
+      const active = state.atlasLocation.toLowerCase() === country.toLowerCase();
+      return `<button class="atlas-country-card" type="button" data-atlas-country="${esc(country)}" aria-pressed="${active}" aria-label="Show ${esc(country)} and its ${datasets.length} dataset${datasets.length === 1 ? "" : "s"} on the map">
+        <span class="atlas-country-name">${esc(country)}<small>${datasets.length} ${datasets.length === 1 ? "dataset" : "datasets"}</small></span>
+        <span class="atlas-country-counts">${counts}</span>
+      </button>`;
+    }).join("");
+  }
+
   function renderMapMarkers() {
     const layer = $("mapMarkersLayer");
     if (!layer) return;
@@ -2215,6 +2244,7 @@
     if (!summary || !list) return;
     const q = String(query).trim().toLowerCase();
     const isAll = q === "all" || (!q && state.atlasLocation === "all");
+    renderAtlasCountryOverview();
 
     const rows = ATLAS_DATASETS.filter(item => {
       if (isAll) return true;
