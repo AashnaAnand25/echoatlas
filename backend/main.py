@@ -58,7 +58,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="EchoAtlas - Breast Ultrasound Research API")
 
-ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly tutor for breast-ultrasound concepts and public research datasets. This is educational only, not for diagnosis or clinical decisions. Never classify or diagnose a specific scan, recommend treatment, or imply that a dataset label or experimental model output is clinical truth. If asked to interpret an individual scan, kindly say you cannot diagnose it and offer to explain general concepts instead. Answer in plain language, usually 2–4 short sentences and under 80 words. Use plain text by default: no Markdown headings, asterisks, tables, or LaTeX unless the learner asks for a structured explanation. Be warm and clear, and explain uncertainty when relevant. EchoAtlas uses small exploratory U-Net experiments, not the paper's MaskFormer. The same-split SNU test run had 66.7% accuracy, 61.7% balanced accuracy, 62.1% macro-F1, 80.5% macro-mAP, 50.4% mean Dice, and 39.8% mean IoU. This was one exploratory run on a duplicate-grouped image-level split, not patient-level validation or clinical evidence. Do not call macro-mAP accuracy or claim clinical utility. For urgent health concerns, suggest contacting a qualified healthcare professional."""
+ECHOATLAS_CHAT_SYSTEM_PROMPT = """You are EchoAtlas Learning Guide, a friendly tutor for breast-ultrasound concepts and public research datasets. This is educational only, not for diagnosis or clinical decisions. Never classify or diagnose a specific scan, recommend treatment, or imply that a dataset label or experimental model output is clinical truth. If asked to interpret an individual scan, kindly say you cannot diagnose it and offer to explain general concepts instead. Answer in plain language, usually 2–4 short sentences and under 80 words. Use plain text by default: no Markdown headings, asterisks, tables, or LaTeX unless the learner asks for a structured explanation. Finish every answer with complete sentences. Give the explanation directly; never output drafting notes, word counts, or self-checks. Be warm and clear, and explain uncertainty when relevant. EchoAtlas uses small exploratory U-Net experiments, not the paper's MaskFormer. The same-split SNU test run had 66.7% accuracy, 61.7% balanced accuracy, 62.1% macro-F1, 80.5% macro-mAP, 50.4% mean Dice, and 39.8% mean IoU. This was one exploratory run on a duplicate-grouped image-level split, not patient-level validation or clinical evidence. Do not call macro-mAP accuracy or claim clinical utility. For urgent health concerns, suggest contacting a qualified healthcare professional."""
 
 
 def _chat_configured() -> bool:
@@ -261,10 +261,16 @@ async def assistant_chat(request: FastAPIRequest):
                     mime_type = header[5:].split(";", 1)[0]
                     parts.append({"inline_data": {"mime_type": mime_type, "data": encoded}})
         contents.append({"role": "model" if message["role"] == "assistant" else "user", "parts": parts})
+    generation_config = {"temperature": 0.2, "maxOutputTokens": 4096}
+    # Reasoning shares the output budget; leave room for the actual explanation.
+    if model_name.startswith("gemini-3"):
+        generation_config["thinkingConfig"] = {"thinkingLevel": "low", "includeThoughts": False}
+    elif model_name.startswith("gemini-2.5-flash"):
+        generation_config["thinkingConfig"] = {"thinkingBudget": 0, "includeThoughts": False}
     request_body = json.dumps({
         "system_instruction": {"parts": [{"text": ECHOATLAS_CHAT_SYSTEM_PROMPT}]},
         "contents": contents,
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 256},
+        "generationConfig": generation_config,
     }).encode("utf-8")
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{quote(model_name, safe='')}:generateContent"
     upstream = Request(endpoint, data=request_body, headers={
@@ -284,10 +290,16 @@ async def assistant_chat(request: FastAPIRequest):
     except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=502, detail="Could not reach the Gemini API.") from exc
     try:
+        candidate = result["candidates"][0]
+        if candidate.get("finishReason") == "MAX_TOKENS":
+            raise HTTPException(
+                status_code=502,
+                detail="Gemini could not finish this answer. Please try a shorter question or send it again.",
+            )
         answer = "\n".join(
             part.get("text", "")
-            for part in result["candidates"][0]["content"]["parts"]
-            if isinstance(part, dict) and isinstance(part.get("text"), str)
+            for part in candidate["content"]["parts"]
+            if isinstance(part, dict) and not part.get("thought") and isinstance(part.get("text"), str)
         )
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError("empty completion")
