@@ -41,7 +41,10 @@ MODEL_PATH = Path(os.environ.get(
 FRONTEND_DIR = BASE_DIR / "frontend"
 DATASET_DIR = BASE_DIR / "data" / "Dataset_BUSI_with_GT"
 MANIFEST_PATH = BASE_DIR / "data" / "busi_manifest.csv"
-UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR = Path(os.environ.get(
+    "ECHOATLAS_UPLOAD_DIR",
+    "/tmp/echoatlas-uploads" if os.environ.get("VERCEL") else BASE_DIR / "uploads",
+))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="EchoAtlas - Breast Ultrasound Research API")
