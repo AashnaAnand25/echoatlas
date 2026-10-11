@@ -1,0 +1,10 @@
+.env
+.env.*
+data/**
+models/**
+uploads/**
+*.ipynb
+scripts/**
+.vscode/**
+__pycache__/**
+**/__pycache__/**
